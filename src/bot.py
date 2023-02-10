@@ -61,10 +61,10 @@ async def verify_download(update: Update, context: ContextTypes.DEFAULT_TYPE, fr
     callback_id = "download_type"
     if from_search_results:
         callback_id += "_search"
-    keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"), InlineKeyboardButton("Shows", callback_data=f"{callback_id}=show")], [
-        InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"), InlineKeyboardButton("Other", callback_data=f"{callback_id}=other")]]
+    keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"), InlineKeyboardButton("Shows", callback_data=f"{callback_id}=show"), InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"),], [
+        InlineKeyboardButton("Other", callback_data=f"{callback_id}=other"), InlineKeyboardButton("⭕️ Cancel", callback_data="cancel")]]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="Where should it be downloaded?", reply_markup=reply_markup)
+    await update.callback_query.edit_message_text(text="Where should it be downloaded?", reply_markup=reply_markup)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -110,6 +110,13 @@ async def accept_magnet_link(update: Update, context: ContextTypes.DEFAULT_TYPE)
     await verify_download(update, context)
 
 
+async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    storage.magnet_link = ""
+    storage.item_chosen = ""
+    storage.search_results = []
+    await update.callback_query.edit_message_text("Canceled")
+
+
 async def search_pb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     search_query = ' '.join(context.args)
     search_results = searcher.search_torrent(search_query)
@@ -150,7 +157,9 @@ application = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
 # TODO: Add user filter - filters.User(1234)
 start_handler = CommandHandler('start', start)
 search_handler = CommandHandler('search', search_pb)
+search_handler_shortcut = CommandHandler('s', search_pb)
 downloads_status_handler = CommandHandler('downloads', get_pending_downloads)
+downloads_status_handler_shortcut = CommandHandler('d', get_pending_downloads)
 magnet_link_handler = MessageHandler(filters.Regex(
     r'magnet:\?xt=.*') & (~filters.COMMAND), accept_magnet_link)
 file_torrent_handler = MessageHandler(
@@ -161,7 +170,9 @@ unknown_handler = MessageHandler(filters.TEXT, unknown_command)
 
 application.add_handler(start_handler)
 application.add_handler(search_handler)
+application.add_handler(search_handler_shortcut)
 application.add_handler(downloads_status_handler)
+application.add_handler(downloads_status_handler_shortcut)
 application.add_handler(magnet_link_handler)
 application.add_handler(file_torrent_handler)
 application.add_handler(CallbackQueryHandler(
@@ -170,6 +181,9 @@ application.add_handler(CallbackQueryHandler(
     callback_mag_link, pattern="mag_link="))
 application.add_handler(CallbackQueryHandler(
     callback_download_type, pattern="download_type"))
+application.add_handler(CallbackQueryHandler(
+    cancel, pattern="cancel"))
+
 
 application.add_handler(unknown_handler)
 application.add_handler(unknown_file_handler)
