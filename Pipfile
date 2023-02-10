@@ -8,11 +8,15 @@ python-telegram-bot = "*"
 requests = "*"
 transmission-rpc = "*"
 prettytable = "*"
+python-dotenv = "*"
 
 [dev-packages]
 autopep8 = "*"
-python-dotenv = "*"
 
 [requires]
 python_version = "3.11"
 python_full_version = "3.11.1"
+
+[scripts]
+build = "docker build . -t torrent-watcher"
+start = "docker run -d --name torrent-watcher --restart unless-stopped torrent-watcher"
