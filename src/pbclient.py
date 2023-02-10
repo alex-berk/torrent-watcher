@@ -38,6 +38,8 @@ class PBSearcher:
     def search_torrent(self, query: str) -> list[TorrentDetails]:
         r = requests.get(self._search_host, params={"q": query})
         search_results = json.loads(r.text)
+        if len(search_results) == 1 and search_results[0]["name"] == "No results returned":
+            return []
         search_results_formatted = [TorrentDetails(
             result["name"],
             self._details_page_prefix + result["id"],
@@ -73,7 +75,7 @@ class PBWatcher(PBSearcher):
     def find_new_episode(self):
         self.episode_number = self.num_episodes_skip + 1
         available_downloads = self._search_episode()
-        if available_downloads[0].name == "No results returned":
+        if not available_downloads:
             return
         if self.size_limit_gb:
             available_downloads = filter(
@@ -86,4 +88,11 @@ class PBWatcher(PBSearcher):
             return
 
 
+if __name__ == "__main__":
+    # s = PBSearcher()
+    # results = s.search_torrent("akira")
+    # [print(result) for result in results[:10]]
 
+    w = PBWatcher("chainsaw man 1080p", 1, 5, 4)
+    new_ep = w.find_new_episode()
+    print(new_ep)
