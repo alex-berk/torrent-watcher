@@ -1,13 +1,15 @@
 import os
 from dotenv import load_dotenv
-from urllib.parse import unquote, parse_qs, urlparse
+from urllib.parse import unquote, parse_qs
+import prettytable as pt
+
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
 
 from pbclient import TorrentDetails, PBSearcher
 
-from transmission_client import TransmissionClient, download_paths
+from transmission_client import TransmissionClient, download_paths, Torrent
 from transmission_rpc import error as transmission_error
 
 load_dotenv()
@@ -42,6 +44,17 @@ def generate_search_results_keyboard(results: list[TorrentDetails]):
         outer_array.append([InlineKeyboardButton(f"{result.size_gb:.2f}Gb, {result.seeds}S", url=result.link),
                             InlineKeyboardButton("📥", callback_data=f"mag_link={index}")])
     return outer_array
+
+
+def generate_progress_table(torrents: list[Torrent]) -> str:
+    table = pt.PrettyTable(["name", "size", "status", "progress",])
+    table.align["name"] = "l"
+    table.align["size"] = "l"
+    table.max_table_width = 70
+    table.max_width["name"] = 40
+    [table.add_row((torrent.name, f"{torrent.size_when_done / (8**10):.2f}Gb",
+                   torrent.status, f"{torrent.progress}%")) for torrent in torrents]
+    return str(table)
 
 
 async def verify_download(update: Update, context: ContextTypes.DEFAULT_TYPE, from_search_results=False):
@@ -84,7 +97,7 @@ async def callback_download_type(update: Update, context: ContextTypes.DEFAULT_T
     try:
         transmission.add_download(magnet_link, download_type)
         await query.answer()
-        await query.edit_message_text(text=f"Download job added\nPath: <b>{download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+        await query.edit_message_text(text=f"Download job added\nPath: <b>{transmission.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
     except Exception as e:
         print(e)
         await query.answer("There was a problem adding the download job")
@@ -117,6 +130,14 @@ async def save_torrent_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="let's pretend i've saved it")
 
 
+async def get_pending_downloads(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    pending_downloads = transmission.get_pending_downloads()
+    if not pending_downloads:
+        return await context.bot.send_message(chat_id=update.effective_chat.id, text="no pending downloads at the moment")
+    output_table = generate_progress_table(pending_downloads)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=f'<pre>{output_table}</pre>', parse_mode="html")
+
+
 async def unknown_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="that doesn't look like a file i can work with")
 
@@ -129,6 +150,7 @@ application = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
 # TODO: Add user filter - filters.User(1234)
 start_handler = CommandHandler('start', start)
 search_handler = CommandHandler('search', search_pb)
+downloads_status_handler = CommandHandler('downloads', get_pending_downloads)
 magnet_link_handler = MessageHandler(filters.Regex(
     r'magnet:\?xt=.*') & (~filters.COMMAND), accept_magnet_link)
 file_torrent_handler = MessageHandler(
@@ -139,6 +161,7 @@ unknown_handler = MessageHandler(filters.TEXT, unknown_command)
 
 application.add_handler(start_handler)
 application.add_handler(search_handler)
+application.add_handler(downloads_status_handler)
 application.add_handler(magnet_link_handler)
 application.add_handler(file_torrent_handler)
 application.add_handler(CallbackQueryHandler(

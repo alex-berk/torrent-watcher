@@ -9,6 +9,9 @@ class TransmissionClient(Client):
         super().__init__(host=host)
         self.download_paths = download_paths
 
+    _pending_statuses = ['downloading',
+                         'download pending', 'check pending', 'checking',]
+
     def add_download(self, magnet_link: str, download_type: str) -> Torrent:
         download_dir = download_paths[download_type]
         return self.add_torrent(magnet_link, download_dir=download_dir)
@@ -21,6 +24,12 @@ class TransmissionClient(Client):
         except StopIteration:
             return
 
+    def get_pending_downloads(self):
+        torrents = self.get_torrents()
+        pending_torrents = filter(
+            lambda x: x.status in self._pending_statuses, torrents)
+        return tuple(pending_torrents)
+
 
 download_paths = {
     "movie": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "movies"),
@@ -32,5 +41,6 @@ download_paths = {
 if __name__ == "__main__":
     try:
         c = TransmissionClient(os.getenv("TRANSMISSION_HOST"), download_paths)
+        torrents = c.get_pending_downloads()
     except error.TransmissionConnectError:
         raise "can't connect to the host"

@@ -7,6 +7,7 @@ name = "pypi"
 python-telegram-bot = "*"
 requests = "*"
 transmission-rpc = "*"
+prettytable = "*"
 
 [dev-packages]
 autopep8 = "*"
