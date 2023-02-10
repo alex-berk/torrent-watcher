@@ -14,9 +14,9 @@ class TorrentDetails:
 
 
 class PBSearcher:
-    search_host = "https://apibay.org/q.php"
-    details_page_prefix = "https://thepiratebay.org/description.php?id="
-    trackers_list = [
+    _search_host = "https://apibay.org/q.php"
+    _details_page_prefix = "https://thepiratebay.org/description.php?id="
+    _trackers_list = [
         "udp://tracker.coppersurfer.tk:6969/announce",
         "udp://tracker.openbittorrent.com:6969/announce",
         "udp://9.rarbg.to:2710/announce",
@@ -31,21 +31,23 @@ class PBSearcher:
 
     @classmethod
     def generate_magnet_link(cls, torrent_details: TorrentDetails) -> str:
-        trackers_list_formatted = "&tr=".join([""] + cls.trackers_list)
+        trackers_list_formatted = "&tr=".join([""] + cls._trackers_list)
         link = f"magnet:?xt=urn:btih:{torrent_details.info_hash}&dn={torrent_details.name}{trackers_list_formatted}"
         return link
 
     def search_torrent(self, query: str) -> list[TorrentDetails]:
-        r = requests.get(self.search_host, params={"q": query})
+        r = requests.get(self._search_host, params={"q": query})
         search_results = json.loads(r.text)
         search_results_formatted = [TorrentDetails(
             result["name"],
-            self.details_page_prefix + result["id"],
+            self._details_page_prefix + result["id"],
             int(result["size"]) / 8**10,
             int(result["seeders"]),
             result["status"],
             result["info_hash"]
         ) for result in search_results]
+        search_results_formatted = sorted(
+            search_results_formatted, key=lambda x: x.seeds, reverse=True)
         return search_results_formatted
 
 
@@ -68,7 +70,7 @@ class PBWatcher(PBSearcher):
         search_query = self._generate_search_query()
         return self.search_torrent(search_query)
 
-    def search_new_episode(self):
+    def find_new_episode(self):
         self.episode_number = self.num_episodes_skip + 1
         available_downloads = self._search_episode()
         if available_downloads[0].name == "No results returned":
@@ -78,5 +80,10 @@ class PBWatcher(PBSearcher):
                 lambda x: x.size_gb <= self.size_limit_gb, available_downloads)
         available_downloads = filter(
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
-        top_result = max(list(available_downloads), key=lambda x: x.seeds)
-        return top_result
+        try:
+            return next(available_downloads)
+        except StopIteration:
+            return
+
+
+
