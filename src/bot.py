@@ -1,29 +1,119 @@
 import os
 from dotenv import load_dotenv
-from telegram import Update
-from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler
+from urllib.parse import unquote, parse_qs, urlparse
+
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
+
+from pbclient import TorrentDetails, PBSearcher
+
+from transmission_client import TransmissionClient, download_paths
+from transmission_rpc import error as transmission_error
 
 load_dotenv()
-TOKEN = os.getenv("TG_BOT_TOKEN")
+
+
+class SessionStorage:
+    pass
+
+
+storage = SessionStorage()
+
+try:
+    transmission = TransmissionClient(
+        os.getenv("TRANSMISSION_HOST"), download_paths)
+except transmission_error.TransmissionConnectError:
+    raise "can't connect to the host"
+
+searcher = PBSearcher()
+
+
+def get_param_value(val): return val[val.find("=") + 1:]
+
+
+def get_name_from_magnet(magnet): return parse_qs(unquote(magnet))["dn"].pop()
+
+
+def generate_search_results_keyboard(results: list[TorrentDetails]):
+    outer_array = []
+    for index, result in enumerate(results):
+        outer_array.append([InlineKeyboardButton(
+            result.name, callback_data=f"full_name={index}")])
+        outer_array.append([InlineKeyboardButton(f"{result.size_gb:.2f}Gb, {result.seeds}S", url=result.link),
+                            InlineKeyboardButton("📥", callback_data=f"mag_link={index}")])
+    return outer_array
+
+
+async def verify_download(update: Update, context: ContextTypes.DEFAULT_TYPE, from_search_results=False):
+    callback_id = "download_type"
+    if from_search_results:
+        callback_id += "_search"
+    keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"), InlineKeyboardButton("Shows", callback_data=f"{callback_id}=show")], [
+        InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"), InlineKeyboardButton("Other", callback_data=f"{callback_id}=other")]]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Where should it be downloaded?", reply_markup=reply_markup)
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text="I'm a bot, please talk to me!")
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="Heya!", parse_mode='html')
 
 
-async def echo(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=update.message.text)
+async def callback_full_name(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    item_index = get_param_value(update.callback_query.data)
+    full_name = storage.search_results[int(item_index)].name
+    await update.callback_query.answer(full_name)
 
 
-async def caps(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text_caps = ' '.join(context.args).upper()
-    await context.bot.send_message(chat_id=update.effective_chat.id, text=text_caps)
+async def callback_mag_link(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    item_index = get_param_value(update.callback_query.data)
+    storage.item_chosen = storage.search_results[int(item_index)]
+    await verify_download(update, context, True)
+
+
+async def callback_download_type(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    query = update.callback_query
+    download_type = get_param_value(query.data)
+    if query.data.startswith("download_type_search"):
+        magnet_link = searcher.generate_magnet_link(
+            storage.item_chosen)
+        download_name = storage.item_chosen.name
+    else:
+        magnet_link = storage.magnet_link
+        download_name = get_name_from_magnet(magnet_link)
+
+    try:
+        transmission.add_download(magnet_link, download_type)
+        await query.answer()
+        await query.edit_message_text(text=f"Download job added\nPath: <b>{download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+    except Exception as e:
+        print(e)
+        await query.answer("There was a problem adding the download job")
+    storage.item_chosen = ""
+    storage.search_results = []
+
+
+async def accept_magnet_link(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    storage.magnet_link = update.message.text
+    await verify_download(update, context)
+
+
+async def search_pb(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    search_query = ' '.join(context.args)
+    search_results = searcher.search_torrent(search_query)
+    if search_results:
+        storage.search_results = search_results
+        text = "here a top results i've found:"
+        results_keyboard = generate_search_results_keyboard(search_results[:5])
+        reply_markup = InlineKeyboardMarkup(results_keyboard)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
+    else:
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
 
 
 async def save_torrent_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     file = await context.bot.get_file(update.message.document)
-    print(os.getcwd())
     await file.download_to_drive(os.path.join("tg_downloads", update.message.document.file_name))
+    # TODO: send download job
     await context.bot.send_message(chat_id=update.effective_chat.id, text="let's pretend i've saved it")
 
 
@@ -31,28 +121,35 @@ async def unknown_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="that doesn't look like a file i can work with")
 
 
-async def unknown(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
+application = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
+
+# TODO: Add user filter - filters.User(1234)
+start_handler = CommandHandler('start', start)
+search_handler = CommandHandler('search', search_pb)
+magnet_link_handler = MessageHandler(filters.Regex(
+    r'magnet:\?xt=.*') & (~filters.COMMAND), accept_magnet_link)
+file_torrent_handler = MessageHandler(
+    filters.Document.FileExtension("torrent"), save_torrent_file)
+unknown_file_handler = MessageHandler(
+    filters.Document.ALL, unknown_file)
+unknown_handler = MessageHandler(filters.TEXT, unknown_command)
+
+application.add_handler(start_handler)
+application.add_handler(search_handler)
+application.add_handler(magnet_link_handler)
+application.add_handler(file_torrent_handler)
+application.add_handler(CallbackQueryHandler(
+    callback_full_name, pattern="full_name="))
+application.add_handler(CallbackQueryHandler(
+    callback_mag_link, pattern="mag_link="))
+application.add_handler(CallbackQueryHandler(
+    callback_download_type, pattern="download_type"))
+
+application.add_handler(unknown_handler)
+application.add_handler(unknown_file_handler)
 
 if __name__ == '__main__':
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    start_handler = CommandHandler('start', start)
-    echo_handler = MessageHandler(filters.TEXT & (~filters.COMMAND), echo)
-    caps_handler = CommandHandler('caps', caps)
-    file_torrent_handler = MessageHandler(
-        filters.Document.FileExtension("torrent"), save_torrent_file)
-    unknown_file_handler = MessageHandler(
-        filters.Document.ALL, unknown_file)
-    unknown_handler = MessageHandler(filters.COMMAND, unknown)
-
-    application.add_handler(start_handler)
-    application.add_handler(echo_handler)
-    application.add_handler(caps_handler)
-    application.add_handler(file_torrent_handler)
-
-    application.add_handler(unknown_handler)
-    application.add_handler(unknown_file_handler)
-
     application.run_polling()
