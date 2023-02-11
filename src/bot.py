@@ -29,6 +29,8 @@ except transmission_error.TransmissionConnectError:
 
 searcher = PBSearcher()
 
+users_whitelist = [int(uid) for uid in os.getenv("ALLOWED_TG_IDS").split(",")]
+
 
 def get_param_value(val): return val[val.find("=") + 1:]
 
@@ -113,21 +115,22 @@ async def accept_magnet_link(update: Update, context: ContextTypes.DEFAULT_TYPE)
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     storage.magnet_link = ""
     storage.item_chosen = ""
-    storage.search_results = []
     await update.callback_query.edit_message_text("Canceled")
 
 
 async def search_pb(update: Update, context: ContextTypes.DEFAULT_TYPE):
     search_query = ' '.join(context.args)
+    if not search_query:
+        return await context.bot.send_message(chat_id=update.effective_chat.id,
+                                              text="You need to use this command with search query, lile <i>/search Game of thrones s03</i>")
     search_results = searcher.search_torrent(search_query)
-    if search_results:
-        storage.search_results = search_results
-        text = "here a top results i've found:"
-        results_keyboard = generate_search_results_keyboard(search_results[:5])
-        reply_markup = InlineKeyboardMarkup(results_keyboard)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
-    else:
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
+    if not search_results:
+        return await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
+    storage.search_results = search_results
+    text = "here's a top results i've found:"
+    results_keyboard = generate_search_results_keyboard(search_results[:5])
+    reply_markup = InlineKeyboardMarkup(results_keyboard)
+    await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
 
 
 async def save_torrent_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -145,6 +148,10 @@ async def get_pending_downloads(update: Update, context: ContextTypes.DEFAULT_TY
     await context.bot.send_message(chat_id=update.effective_chat.id, text=f'<pre>{output_table}</pre>', parse_mode="html")
 
 
+async def auth_failed(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await context.bot.send_message(chat_id=update.effective_chat.id, text="do i know you?")
+
+
 async def unknown_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await context.bot.send_message(chat_id=update.effective_chat.id, text="that doesn't look like a file i can work with")
 
@@ -154,7 +161,8 @@ async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 application = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
 
-# TODO: Add user filter - filters.User(1234)
+auth_handler = MessageHandler(
+    filters.TEXT & ~filters.User(users_whitelist), auth_failed)
 start_handler = CommandHandler('start', start)
 search_handler = CommandHandler('search', search_pb)
 search_handler_shortcut = CommandHandler('s', search_pb)
@@ -168,6 +176,7 @@ unknown_file_handler = MessageHandler(
     filters.Document.ALL, unknown_file)
 unknown_handler = MessageHandler(filters.TEXT, unknown_command)
 
+application.add_handler(auth_handler)
 application.add_handler(start_handler)
 application.add_handler(search_handler)
 application.add_handler(search_handler_shortcut)
