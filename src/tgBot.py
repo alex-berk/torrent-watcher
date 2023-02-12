@@ -35,9 +35,9 @@ class TgBotRunner:
         search_handler = CommandHandler('search', self.search_pb)
         search_handler_shortcut = CommandHandler('s', self.search_pb)
         downloads_status_handler = CommandHandler(
-            'downloads', self.get_pending_downloads)
+            'downloads', self.get_recent_downloads)
         downloads_status_handler_shortcut = CommandHandler(
-            'd', self.get_pending_downloads)
+            'd', self.get_recent_downloads)
         magnet_link_handler = MessageHandler(filters.Regex(
             r'magnet:\?xt=.*') & (~filters.COMMAND), self.accept_magnet_link)
         file_torrent_handler = MessageHandler(
@@ -204,8 +204,8 @@ class TgBotRunner:
             await context.bot.send_message(chat_id=update.effective_chat.id, text="Download job added")
         self.clear_storage()
 
-    async def get_pending_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        pending_downloads = self.torrent_client.get_pending_downloads()
+    async def get_recent_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        pending_downloads = self.torrent_client.get_recent_downloads()
         if not pending_downloads:
             return await context.bot.send_message(chat_id=update.effective_chat.id, text="no pending downloads at the moment")
         output_table = self.generate_progress_table(pending_downloads)
