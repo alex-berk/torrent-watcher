@@ -186,22 +186,28 @@ class TgBotRunner:
         if query.data.startswith("download_type_search"):
             magnet_link = searcher.generate_magnet_link(
                 self.item_chosen)
-            download_name = self.item_chosen.name
-            self.torrent_client.add_download(magnet_link, download_type)
+            # download_name = self.item_chosen.name
+            added_download = self.torrent_client.add_download(
+                magnet_link, download_type)
+            download_name = added_download.name
             await query.answer()
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
 
         elif query.data.startswith("download_type_maglink"):
             magnet_link = self.active_torrent
-            download_name = self.get_name_from_magnet(magnet_link)
-            self.torrent_client.add_download(magnet_link, download_type)
+            # download_name = self.get_name_from_magnet(magnet_link)
+            added_download = self.torrent_client.add_download(
+                magnet_link, download_type)
+            download_name = added_download.name
             await query.answer()
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
 
         elif query.data.startswith("download_type_file"):
-            self.torrent_client.download_from_file(
+            added_download = self.torrent_client.download_from_file(
                 self.active_torrent, download_type)
-            await context.bot.send_message(chat_id=update.effective_chat.id, text="Download job added")
+            download_name = added_download.name
+            await query.answer()
+            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
         self.clear_storage()
 
     async def get_recent_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
