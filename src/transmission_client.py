@@ -16,6 +16,10 @@ class TransmissionClient(Client):
         download_dir = download_paths[download_type]
         return self.add_torrent(magnet_link, download_dir=download_dir)
 
+    def download_from_file(self, filename, download_type):
+        with open(filename, "rb") as f:
+            self.add_download(f, download_type)
+
     def find_torrent(self, torrent_name: str) -> Torrent:
         torrents_list = self.get_torrents()
         result = filter(lambda t: t.name == torrent_name, torrents_list)

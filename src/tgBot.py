@@ -18,13 +18,13 @@ from transmission_rpc import error as transmission_error
 class Storage:
     saved_search_results: list[TorrentDetails]
     item_chosen: str or None
-    active_magnet_link: str or None
+    active_torrent: str or None
 
 
 class TgBotRunner:
     def __init__(self, tg_client, torrent_client, torrent_searcher, tg_user_whitelist=None):
         self.tg_client = tg_client
-        self.torrent = torrent_client
+        self.torrent_client = torrent_client
         self.torrent_searcher = torrent_searcher
         self.tg_user_whitelist = tg_user_whitelist or []
         self._storage = Storage([None] * 50, None, None)
@@ -79,12 +79,12 @@ class TgBotRunner:
         self._storage.item_chosen = item.info_hash
 
     @property
-    def active_magnet_link(self):
-        return self._storage.active_magnet_link
+    def active_torrent(self):
+        return self._storage.active_torrent
 
-    @active_magnet_link.setter
-    def active_magnet_link(self, link):
-        self._storage.active_magnet_link = link
+    @active_torrent.setter
+    def active_torrent(self, link):
+        self._storage.active_torrent = link
 
     @property
     def saved_search_results(self):
@@ -102,21 +102,24 @@ class TgBotRunner:
     def get_name_from_magnet(magnet): return parse_qs(
         unquote(magnet))["dn"].pop()
 
-    def get_search_result_by_hash(self, hash: str):
-        return next(filter(lambda item: item.hash_info == hash, self.search_results))
+    def get_search_result(self, hash: str):
+        try:
+            return next(filter(lambda item: item.info_hash == hash, self.saved_search_results))
+        except StopIteration:
+            return
 
     def clear_storage(self):
-        self.item_chosen = None
-        self.active_magnet_link = None
+        self._storage.item_chosen = None
+        self._storage.active_torrent = None
 
     @staticmethod
     def generate_search_results_keyboard(results: list[TorrentDetails]):
         outer_array = []
-        for index, result in enumerate(results):
+        for result in results:
             outer_array.append([InlineKeyboardButton(
-                result.name, callback_data=f"full_name={index}")])
+                result.name, callback_data=f"full_name={result.info_hash}")])
             outer_array.append([InlineKeyboardButton(f"{result.size_gb:.2f}Gb, {result.seeds}S", url=result.link),
-                                InlineKeyboardButton("📥", callback_data=f"mag_link={index}")])
+                                InlineKeyboardButton("📥", callback_data=f"mag_link={result.info_hash}")])
         return outer_array
 
     @staticmethod
@@ -133,14 +136,14 @@ class TgBotRunner:
     # Handler functions
         # flow handlers
     @staticmethod
-    async def verify_download_type(update: Update, context: ContextTypes.DEFAULT_TYPE, from_search_results=False):
+    async def verify_download_type(update: Update, context: ContextTypes.DEFAULT_TYPE, callback_postfix=None):
         callback_id = "download_type"
-        if from_search_results:
-            callback_id += "_search"
+        if callback_postfix:
+            callback_id += f"_{callback_postfix}"
         keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"), InlineKeyboardButton("Shows", callback_data=f"{callback_id}=show"), InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"),], [
             InlineKeyboardButton("Other", callback_data=f"{callback_id}=other"), InlineKeyboardButton("⭕️ Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await update.callback_query.edit_message_text(text="Where should it be downloaded?", reply_markup=reply_markup)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Where should it be downloaded?", reply_markup=reply_markup)
 
         # command handlers
     @staticmethod
@@ -167,17 +170,15 @@ class TgBotRunner:
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
         # callback handlers
-
     async def callback_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        item_index = self.get_param_value(update.callback_query.data)
-        full_name = self.saved_search_results[int(item_index)].name
+        item_hash = self.get_param_value(update.callback_query.data)
+        full_name = self.get_search_result(item_hash).name
         await update.callback_query.answer(full_name)
 
     async def callback_mag_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        item_index = self.get_param_value(update.callback_query.data)
-        self.item_chosen = self.saved_search_results[int(
-            item_index)]
-        await self.verify_download_type(update, context, True)
+        item_hash = self.get_param_value(update.callback_query.data)
+        self.item_chosen = self.get_search_result(item_hash)
+        await self.verify_download_type(update, context, "search")
 
     async def callback_download_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
@@ -186,21 +187,25 @@ class TgBotRunner:
             magnet_link = searcher.generate_magnet_link(
                 self.item_chosen)
             download_name = self.item_chosen.name
-        else:
-            magnet_link = self.storage.magnet_link
-            download_name = self.get_name_from_magnet(magnet_link)
-
-        try:
-            transmission.add_download(magnet_link, download_type)
+            self.torrent_client.add_download(magnet_link, download_type)
             await query.answer()
-            await query.edit_message_text(text=f"Download job added\nPath: <b>{transmission.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
-        except Exception as e:
-            print(e)
-            await query.answer("There was a problem adding the download job")
+            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+
+        elif query.data.startswith("download_type_maglink"):
+            magnet_link = self.active_torrent
+            download_name = self.get_name_from_magnet(magnet_link)
+            self.torrent_client.add_download(magnet_link, download_type)
+            await query.answer()
+            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+
+        elif query.data.startswith("download_type_file"):
+            self.torrent_client.download_from_file(
+                self.active_torrent, download_type)
+            await context.bot.send_message(chat_id=update.effective_chat.id, text="Download job added")
         self.clear_storage()
 
     async def get_pending_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        pending_downloads = transmission.get_pending_downloads()
+        pending_downloads = self.torrent_client.get_pending_downloads()
         if not pending_downloads:
             return await context.bot.send_message(chat_id=update.effective_chat.id, text="no pending downloads at the moment")
         output_table = self.generate_progress_table(pending_downloads)
@@ -212,15 +217,18 @@ class TgBotRunner:
 
         # text / file handlers
     async def accept_magnet_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        self.storage.magnet_link = update.message.text
-        await self.verify_download_type(update, context)
+        self.active_torrent = update.message.text
+        await self.verify_download_type(update, context, "maglink")
 
-    @staticmethod
-    async def save_torrent_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    async def save_torrent_file(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await context.bot.get_file(update.message.document)
-        await file.download_to_drive(os.path.join("tg_downloads", update.message.document.file_name))
-        # TODO: send download job
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="let's pretend i've saved it")
+        save_path = os.path.join(
+            os.getcwd(), "torrent-files", update.message.document.file_name)
+        await file.download_to_drive(save_path)
+        print(os.path.join(os.getcwd(), "torrent-files",
+              update.message.document.file_name))
+        self.active_torrent = save_path
+        await self.verify_download_type(update, context, "file")
 
     @staticmethod
     async def unknown_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
