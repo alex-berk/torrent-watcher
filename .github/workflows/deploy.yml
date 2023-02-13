@@ -14,4 +14,4 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: "Post deploy request"
-        run: curl ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
+        run: curl --fail-with-body --silent ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
