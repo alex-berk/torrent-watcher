@@ -7,5 +7,6 @@ jobs:
     name: Test Job
     runs-on: ubuntu-latest
     steps:
-      - run: curl 'https://httpbin.org/post' -X POST
-      - run: curl ${{ secrets.DEPLOYER_HOST }}
+      - name: "Post deploy request"
+        run: echo ${{ github.event.repository.name }}
+        # run: curl ${{ secrets.DEPLOYER_HOST }} -x POST --data '{"project":"${{ github.event.repository.name }}"}'
