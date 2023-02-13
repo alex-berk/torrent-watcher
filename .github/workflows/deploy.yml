@@ -8,10 +8,10 @@ on:
       - release
 
 jobs:
-  test-deploy:
+  deploy:
     name: Test Job
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: "Post deploy request"
-        run: curl ${{ secrets.DEPLOYER_HOST }} -x POST --data '{"project":"${{ github.event.repository.name }}"}'
+        run: curl ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
