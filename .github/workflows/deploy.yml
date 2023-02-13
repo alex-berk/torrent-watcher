@@ -9,9 +9,9 @@ on:
 
 jobs:
   deploy:
-    name: Test Job
+    name: Deploy
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     steps:
       - name: "Post deploy request"
-        run: curl ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
+        run: curl --fail-with-body --silent ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
