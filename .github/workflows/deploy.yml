@@ -1,0 +1,11 @@
+name: Deploy
+
+on: push
+
+jobs:
+  test-deploy:
+    name: Test Job
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl 'https://httpbin.org/post' -X POST
+      - run: curl ${{ secrets.DEPLOYER_HOST }}
