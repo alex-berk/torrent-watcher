@@ -103,9 +103,9 @@ class TgBotRunner:
     def get_name_from_magnet(magnet): return parse_qs(
         unquote(magnet))["dn"].pop()
 
-    def send_message(self, chat_id, text):
+    def send_message(self, chat_id, text, parse_mode="html"):
         asyncio.get_event_loop().run_until_complete(
-            self.tg_client.bot.send_message(chat_id=chat_id, text=text))
+            self.tg_client.bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode))
 
     def get_search_result(self, hash: str):
         try:
@@ -169,6 +169,10 @@ class TgBotRunner:
             search_results)
         reply_markup = InlineKeyboardMarkup(results_keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
+
+    def monitor_result_update(self, chat_id: int, torrent: Torrent, type: str):
+        text = f"Monitor found new result!\n${torrent.name()}</i>"
+        self.send_message(chat_id, text, parse_mode="html")
 
     @staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -260,10 +264,8 @@ except transmission_error.TransmissionConnectError:
     raise "can't connect to the host"
 searcher = PBSearcher()
 users_whitelist = [int(uid) for uid in os.getenv("ALLOWED_TG_IDS").split(",")]
-
 runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
                      torrent_searcher=searcher, tg_user_whitelist=users_whitelist)
 
 if __name__ == "__main__":
-    runner.send_message(chat_id=87794324, text="started")
     runner.tg_client.run_polling()

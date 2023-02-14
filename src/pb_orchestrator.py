@@ -21,9 +21,9 @@ class MonitorOrchestrator:
     def __init__(self, monitor_settings_path="./monitor_settings.json") -> None:
         self._monitor_settings_path = monitor_settings_path
         self._settings: list[MonitorSetting] = []
-        self._load_monitor_settings()
+        self.update_monitor_settings_from_json()
 
-    def _load_monitor_settings(self) -> None:
+    def update_monitor_settings_from_json(self) -> None:
         if not path.exists(self._monitor_settings_path):
             open(self._monitor_settings_path, "w")
         with open(self._monitor_settings_path, "r") as f:
@@ -90,6 +90,7 @@ class MonitorOrchestrator:
         self.add_monitor_job(settings)
 
     def run_search_jobs(self) -> list[JobResult]:
+        self.update_monitor_settings_from_json()
         jobs = [JobResult(job.searcher.look(), job)
                 for job in self._settings]
         jobs_with_results = list(filter(lambda j: j.result, jobs))
