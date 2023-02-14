@@ -8,7 +8,7 @@ import prettytable as pt
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
 
-from pbclient import TorrentDetails, PBSearcher
+from pb_client import TorrentDetails, PBSearcher
 
 from transmission_client import TransmissionClient, download_paths, Torrent
 from transmission_rpc import error as transmission_error
