@@ -181,7 +181,7 @@ class MonitorOrchestrator:
         self._settings.append(setting)
         self._save_settings()
 
-    def delete_monitor_job(self, job):
+    def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
         self._save_settings()
 
@@ -189,7 +189,7 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def run_search_jobs(self) -> filter:
+    def run_search_jobs(self) -> list[TorrentDetails]:
         jobs = [JobResult(job.owner_id, job.searcher.look(), job)
                 for job in self._settings]
         jobs_with_results = list(filter(lambda j: j.result, jobs))
@@ -197,7 +197,7 @@ class MonitorOrchestrator:
                            == PBSearcher, jobs_with_results)
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
         self._save_settings()
-        return jobs_with_results
+        return list(map(lambda j: j.result, jobs_with_results))
 
 
 if __name__ == "__main__":
@@ -223,5 +223,6 @@ if __name__ == "__main__":
     for job in o.run_search_jobs():
         print(job)
 
+    print()
     for result in o._settings:
         print(result)
