@@ -2,3 +2,4 @@
 /torrent-files
 
 .env
+monitor_settings.json
