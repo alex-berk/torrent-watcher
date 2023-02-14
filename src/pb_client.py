@@ -93,7 +93,9 @@ class PBWatcher(PBSearcher):
         available_downloads = filter(
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
-            return next(available_downloads)
+            new_episode = next(available_downloads)
+            self.num_episodes_skip += 1
+            return new_episode
         except StopIteration:
             return
 
@@ -106,6 +108,13 @@ class MonitorSetting:
     owner_id: int
     searcher: PBSearcher or PBWatcher
     silent: bool = True
+
+
+@dataclass
+class JobResult:
+    owner_id: int
+    result: TorrentDetails
+    job_settings: MonitorSetting
 
 
 class MonitorOrchestrator:
@@ -164,7 +173,6 @@ class MonitorOrchestrator:
         return setting_obj
 
     def _save_settings(self) -> None:
-
         with open(self._monitor_settings_path, 'w') as f:
             settings_json = list(map(self._setting_to_dict, self._settings))
             json.dump(settings_json, f, indent=2)
@@ -173,14 +181,22 @@ class MonitorOrchestrator:
         self._settings.append(setting)
         self._save_settings()
 
+    def delete_monitor_job(self, job):
+        self._settings.remove(job)
+        self._save_settings()
+
     def add_monitor_job_from_dict(self, settings_dict: dict) -> None:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
     def run_search_jobs(self) -> filter:
-        jobs = [(job.owner_id, job.searcher.look())
+        jobs = [JobResult(job.owner_id, job.searcher.look(), job)
                 for job in self._settings]
-        jobs_with_results = filter(lambda x: x[1], jobs)
+        jobs_with_results = list(filter(lambda j: j.result, jobs))
+        done_jobs = filter(lambda j: type(j.job_settings.searcher)
+                           == PBSearcher, jobs_with_results)
+        [self.delete_monitor_job(job.job_settings) for job in done_jobs]
+        self._save_settings()
         return jobs_with_results
 
 
@@ -194,9 +210,6 @@ if __name__ == "__main__":
     print(new_ep)
 
     o = MonitorOrchestrator()
-    for result in o._settings:
-        print(result)
-
     o.add_monitor_job(MonitorSetting(
         123, PBWatcher("one punch man", 1, 2, 3), False))
 
@@ -209,3 +222,6 @@ if __name__ == "__main__":
 
     for job in o.run_search_jobs():
         print(job)
+
+    for result in o._settings:
+        print(result)
