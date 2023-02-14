@@ -63,7 +63,7 @@ class PBSearcher:
             return
 
 
-class PBWatcher(PBSearcher):
+class PBMonitor(PBSearcher):
     def __init__(self, show_name: str, season_number: int, num_episodes_skip: int, size_limit_gb: int = None, only_vips=False):
         self.show_name = show_name
         self.season_number = season_number
@@ -106,7 +106,7 @@ class PBWatcher(PBSearcher):
 @dataclass
 class MonitorSetting:
     owner_id: int
-    searcher: PBSearcher or PBWatcher
+    searcher: PBSearcher or PBMonitor
     silent: bool = True
 
 
@@ -139,7 +139,7 @@ class MonitorOrchestrator:
             return MonitorSetting(
                 owner_id=setting["owner_id"],
                 silent=setting.get("silent", True),
-                searcher=PBWatcher(
+                searcher=PBMonitor(
                     show_name=setting["query"],
                     season_number=setting["season"],
                     num_episodes_skip=setting["episodes_done"],
@@ -205,13 +205,13 @@ if __name__ == "__main__":
     results = s.search_torrent("akira")
     [print(result) for result in results[:10]]
 
-    w = PBWatcher("chainsaw man 1080p", 1, 5, 4)
+    w = PBMonitor("chainsaw man 1080p", 1, 5, 4)
     new_ep = w.find_new_episode()
     print(new_ep)
 
     o = MonitorOrchestrator()
     o.add_monitor_job(MonitorSetting(
-        123, PBWatcher("one punch man", 1, 2, 3), False))
+        123, PBMonitor("one punch man", 1, 2, 3), False))
 
     o.add_monitor_job_from_dict({
         "owner_id": 123,
