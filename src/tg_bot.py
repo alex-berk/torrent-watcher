@@ -116,13 +116,16 @@ class TgBotRunner:
         self._storage.active_torrent = None
 
     @staticmethod
-    def generate_search_results_keyboard(results: list[TorrentDetails]):
+    def generate_search_results_keyboard(results: list[TorrentDetails], search_query: str) -> list[list[InlineKeyboardButton]]:
         outer_array = []
         for result in results:
             outer_array.append([InlineKeyboardButton(
                 result.name, callback_data=f"full_name={result.info_hash}")])
             outer_array.append([InlineKeyboardButton(f"{result.size_gb:.2f}Gb, {result.seeds}S", url=result.link),
                                 InlineKeyboardButton("📥", callback_data=f"mag_link={result.info_hash}")])
+        search_page_link = "https://thepiratebay.org/search.php?q=" + search_query
+        outer_array += [[InlineKeyboardButton(
+            "Search results page", url=search_page_link)]]
         return outer_array
 
     @staticmethod
@@ -164,7 +167,7 @@ class TgBotRunner:
         self.saved_search_results = search_results
         text = "here's a top results i've found:"
         results_keyboard = self.generate_search_results_keyboard(
-            search_results)
+            search_results, search_query)
         reply_markup = InlineKeyboardMarkup(results_keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
 
