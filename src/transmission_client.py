@@ -1,4 +1,4 @@
-from transmission_rpc import Client, Torrent, error
+from transmission_rpc import Client, Torrent, error as transmission_error
 import os
 from dotenv import load_dotenv
 from datetime import datetime
@@ -58,5 +58,5 @@ if __name__ == "__main__":
         # torrents = c.get_torrents()
         for torrent in torrents:
             print(torrent)
-    except error.TransmissionConnectError:
+    except transmission_error.TransmissionConnectError:
         raise "can't connect to the host"

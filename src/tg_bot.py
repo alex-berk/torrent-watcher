@@ -1,18 +1,16 @@
 import os
 import asyncio
-from dotenv import load_dotenv
 from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
 import prettytable as pt
 
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
+from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
 
-from pb_client import TorrentDetails, PBSearcher
+from pb_client import TorrentDetails
 
-from transmission_client import TransmissionClient, download_paths, Torrent
-from transmission_rpc import error as transmission_error
+from transmission_client import Torrent
 
 
 @dataclass
@@ -31,7 +29,7 @@ class TgBotRunner:
         self._storage = Storage([None] * 50, None, None)
 
         auth_handler = MessageHandler(
-            filters.TEXT & ~filters.User(users_whitelist), self.auth_failed)
+            filters.TEXT & ~filters.User(self.tg_user_whitelist), self.auth_failed)
         start_handler = CommandHandler('start', self.start)
         search_handler = CommandHandler('search', self.search_pb)
         search_handler_shortcut = CommandHandler('s', self.search_pb)
@@ -160,7 +158,7 @@ class TgBotRunner:
         if not search_query:
             return await context.bot.send_message(chat_id=update.effective_chat.id,
                                                   text="You need to use this command with search query, like <i>/search Game of thrones s03</i>", parse_mode="html")
-        search_results = searcher.search_torrent(search_query)[:5]
+        search_results = self.torrent_searcher.search_torrent(search_query)[:5]
         if not search_results:
             return await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
         self.saved_search_results = search_results
@@ -169,10 +167,6 @@ class TgBotRunner:
             search_results)
         reply_markup = InlineKeyboardMarkup(results_keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
-
-    def monitor_result_update(self, chat_id: int, torrent: Torrent, type: str):
-        text = f"Monitor found new result!\n${torrent.name()}</i>"
-        self.send_message(chat_id, text, parse_mode="html")
 
     @staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -193,7 +187,7 @@ class TgBotRunner:
         query = update.callback_query
         download_type = self.get_param_value(query.data)
         if query.data.startswith("download_type_search"):
-            magnet_link = searcher.generate_magnet_link(
+            magnet_link = self.torrent_searcher.generate_magnet_link(
                 self.item_chosen)
             # download_name = self.item_chosen.name
             added_download = self.torrent_client.add_download(
@@ -252,20 +246,3 @@ class TgBotRunner:
     @staticmethod
     async def auth_failed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="do i know you?")
-
-
-load_dotenv()
-
-tg_client = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
-try:
-    transmission = TransmissionClient(
-        os.getenv("TRANSMISSION_HOST"), download_paths)
-except transmission_error.TransmissionConnectError:
-    raise "can't connect to the host"
-searcher = PBSearcher()
-users_whitelist = [int(uid) for uid in os.getenv("ALLOWED_TG_IDS").split(",")]
-runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
-                     torrent_searcher=searcher, tg_user_whitelist=users_whitelist)
-
-if __name__ == "__main__":
-    runner.tg_client.run_polling()
