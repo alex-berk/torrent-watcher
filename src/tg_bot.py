@@ -1,4 +1,5 @@
 import os
+import asyncio
 from dotenv import load_dotenv
 from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
@@ -101,6 +102,10 @@ class TgBotRunner:
     @staticmethod
     def get_name_from_magnet(magnet): return parse_qs(
         unquote(magnet))["dn"].pop()
+
+    def send_message(self, chat_id, text):
+        asyncio.get_event_loop().run_until_complete(
+            self.tg_client.bot.send_message(chat_id=chat_id, text=text))
 
     def get_search_result(self, hash: str):
         try:
@@ -260,4 +265,5 @@ runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
                      torrent_searcher=searcher, tg_user_whitelist=users_whitelist)
 
 if __name__ == "__main__":
+    runner.send_message(chat_id=87794324, text="started")
     runner.tg_client.run_polling()
