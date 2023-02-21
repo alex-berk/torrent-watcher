@@ -277,8 +277,7 @@ class TgBotRunner:
             season, episode = update.message.text.split("-")
             context.user_data["season"] = int(season)
             context.user_data["episodes_done"] = int(episode)
-            # TODO: one_time_keyboard
-            await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]]))
+            await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]], one_time_keyboard=True))
             return SIZE_LIMIT
         except ValueError:
             self.get_season_and_episode(update, context)
