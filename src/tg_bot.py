@@ -85,6 +85,10 @@ class TgBotRunner:
         self.tg_client.add_handler(CallbackQueryHandler(
             self.callback_mag_link, pattern="mag_link="))
         self.tg_client.add_handler(CallbackQueryHandler(
+            self.callback_monitor_full_name, pattern="monitor_full_name="))
+        self.tg_client.add_handler(CallbackQueryHandler(
+            self.callback_monitor_delete, pattern="monitor_delete="))
+        self.tg_client.add_handler(CallbackQueryHandler(
             self.callback_download_type, pattern="download_type"))
         self.tg_client.add_handler(CallbackQueryHandler(
             self.cancel, pattern="cancel"))
@@ -137,6 +141,14 @@ class TgBotRunner:
             return next(filter(lambda item: item.info_hash == hash, self.saved_search_results))
         except StopIteration:
             return
+
+    def get_active_monitor(self, update: Update) -> MonitorSetting:
+        query = update.callback_query
+        monitor_index = self.get_param_value(query.data)
+        user_monitors = self.monitors_orchestrator.get_user_monitors(
+            update.effective_chat.id)
+        active_monitor = user_monitors[int(monitor_index)]
+        return active_monitor
 
     def clear_storage(self):
         self._storage.item_chosen = None
@@ -278,9 +290,9 @@ class TgBotRunner:
     async def view_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_monitors: MonitorSetting = self.monitors_orchestrator.get_user_monitors(
             update.effective_chat.id)
-        keyboard = [[InlineKeyboardButton(str(user_monitor.searcher), callback_data=f"edit_monitor={index}")]
+        keyboard = [[InlineKeyboardButton(str(user_monitor.searcher), callback_data=f"monitor_full_name={index}"), InlineKeyboardButton("🗑️", callback_data=f"monitor_delete={index}")]
                     for index, user_monitor in enumerate(user_monitors)]
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Here are your active monitors:', reply_markup=keyboard, parse_mode="html")
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Here are your active monitors:', reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="html")
 
     @ staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -326,13 +338,17 @@ class TgBotRunner:
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
         self.clear_storage()
 
-    async def callback_edit_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-        query = update.callback_query
-        monitor_index = self.get_param_value(query.data)
-        user_monitors = self.monitors_orchestrator.get_user_monitors(
-            update.effective_chat.id)
-        monitor_chosen = list(user_monitors)[monitor_index]
-        await query.edit_message_text(text=f"Editing Monitor\n{str(monitor_chosen)}", parse_mode="html")
+    async def callback_monitor_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        active_monitor = self.get_active_monitor(update)
+        print("active_monitor:")
+        print(active_monitor.searcher)
+        await update.callback_query.answer(str(active_monitor.searcher))
+
+    async def callback_monitor_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        active_monitor = self.get_active_monitor(update)
+        self.monitors_orchestrator.delete_monitor_job(active_monitor)
+        await update.callback_query.answer("Deleted")
+        await self.view_monitors(update, context)
 
     async def get_recent_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_downloads = self.torrent_client.get_recent_downloads()

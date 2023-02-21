@@ -23,8 +23,8 @@ class MonitorOrchestrator:
         self._settings: list[MonitorSetting] = []
         self.update_monitor_settings_from_json()
 
-    def get_user_monitors(self, uid: int):  # -> filter[MonitorSetting]:
-        return filter(lambda x: x.owner_id == uid, self._settings)
+    def get_user_monitors(self, uid: int) -> list[MonitorSetting]:
+        return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
         if not path.exists(self._monitor_settings_path):
@@ -106,19 +106,3 @@ class MonitorOrchestrator:
 
 if __name__ == "__main__":
     o = MonitorOrchestrator()
-
-    # o.add_monitor_job(MonitorSetting(
-    #     123, PBMonitor("one punch man", 1, 2, 3), False))
-    # o.add_monitor_job_from_dict({
-    #     "owner_id": 123,
-    #     "silent": False,
-    #     "query": "avatar 2022",
-    #     "is_serial": False
-    # })
-
-    for job in o.run_search_jobs():
-        print(job)
-
-    print()
-    for result in o._settings:
-        print(result)

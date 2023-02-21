@@ -33,7 +33,7 @@ class PBSearcher:
         self.default_query = default_query
 
     def __repr__(self) -> str:
-        return self.default_query
+        return f"(M) / {self.default_query}"
 
     @classmethod
     def generate_magnet_link(cls, torrent_details: TorrentDetails) -> str:
@@ -73,12 +73,15 @@ class PBMonitor(PBSearcher):
         self.size_limit_gb = size_limit_gb
         self.only_vips = only_vips
 
-        self.episode_number = None
+        self.episode_number = self.num_episodes_skip + 1
         self.whitelisted_statuses = (
             "vip",) if self.only_vips else ("vip", "trusted")
 
     def __repr__(self) -> str:
-        return f"{self._generate_search_query} / <={self.size_limit_gb}Gb / {self.whitelisted_statuses.join('||')}"
+        items = ["(S)", self._generate_search_query()]
+        if self.size_limit_gb:
+            items += [f"<={self.size_limit_gb}Gb"]
+        return " / ".join(items)
 
     def _generate_search_query(self) -> str:
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
