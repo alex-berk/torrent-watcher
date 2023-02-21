@@ -339,8 +339,6 @@ class TgBotRunner:
 
     async def callback_monitor_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         active_monitor = self.get_active_monitor(update)
-        print("active_monitor:")
-        print(active_monitor.searcher)
         await update.callback_query.answer(str(active_monitor.searcher))
 
     async def callback_monitor_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -370,8 +368,6 @@ class TgBotRunner:
         save_path = os.path.join(
             os.getcwd(), "torrent-files", update.message.document.file_name)
         await file.download_to_drive(save_path)
-        print(os.path.join(os.getcwd(), "torrent-files",
-              update.message.document.file_name))
         self.active_torrent = save_path
         await self.verify_download_type(update, context, "file")
 
