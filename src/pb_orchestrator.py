@@ -23,6 +23,9 @@ class MonitorOrchestrator:
         self._settings: list[MonitorSetting] = []
         self.update_monitor_settings_from_json()
 
+    def get_user_monitors(self, uid: int):  # -> filter[MonitorSetting]:
+        return filter(lambda x: x.owner_id == uid, self._settings)
+
     def update_monitor_settings_from_json(self) -> None:
         if not path.exists(self._monitor_settings_path):
             open(self._monitor_settings_path, "w")

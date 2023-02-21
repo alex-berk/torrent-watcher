@@ -32,6 +32,9 @@ class PBSearcher:
     def __init__(self, default_query=None) -> None:
         self.default_query = default_query
 
+    def __repr__(self) -> str:
+        return self.default_query
+
     @classmethod
     def generate_magnet_link(cls, torrent_details: TorrentDetails) -> str:
         trackers_list_formatted = "&tr=".join([""] + cls._trackers_list)
@@ -74,6 +77,9 @@ class PBMonitor(PBSearcher):
         self.whitelisted_statuses = (
             "vip",) if self.only_vips else ("vip", "trusted")
 
+    def __repr__(self) -> str:
+        return f"{self._generate_search_query} / <={self.size_limit_gb}Gb / {self.whitelisted_statuses.join('||')}"
+
     def _generate_search_query(self) -> str:
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
 
@@ -110,4 +116,3 @@ if __name__ == "__main__":
     w = PBMonitor("chainsaw man 1080p", 1, 5, 4)
     new_ep = w.find_new_episode()
     print(new_ep)
-

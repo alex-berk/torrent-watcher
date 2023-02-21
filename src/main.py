@@ -11,9 +11,10 @@ from telegram.ext import ApplicationBuilder
 from tg_bot import TgBotRunner
 
 load_dotenv()
+PERIOD_SECONDS = 60 * 60 * 24
 
 torrent_searcher = PBSearcher()
-torrent_monitors = MonitorOrchestrator()
+monitors_orchestrator = MonitorOrchestrator()
 
 try:
     transmission = TransmissionClient(
@@ -25,11 +26,11 @@ users_whitelist = [int(uid) for uid in os.getenv("ALLOWED_TG_IDS").split(",")]
 tg_client = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
 
 runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
-                     torrent_searcher=torrent_searcher, tg_user_whitelist=users_whitelist)
+                     torrent_searcher=torrent_searcher, monitors_orchestrator=monitors_orchestrator, tg_user_whitelist=users_whitelist)
 
 
 def run_search_jobs_on_timer(timer_seconds):
-    search_results = torrent_monitors.run_search_jobs()
+    search_results = monitors_orchestrator.run_search_jobs()
     for found_item in search_results:
         download_type = "show" if type(
             found_item.job_settings.searcher) == PBMonitor else "movie"
@@ -54,5 +55,5 @@ def bot_poll():
 
 if __name__ == '__main__':
     [process.start() for process in
-     (Process(target=run_search_jobs_on_timer, args=(15,)),
+     (Process(target=run_search_jobs_on_timer, args=(PERIOD_SECONDS,)),
       Process(target=bot_poll))]
