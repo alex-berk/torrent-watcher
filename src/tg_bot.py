@@ -241,7 +241,7 @@ class TgBotRunner:
             context.user_data["notify"] = "yes"
             context.user_data["monitor_type"] = "movie"
             context.user_data["search_query"] = search_query
-            await self.generate_torrent_monitor(update, context)
+            return await self.generate_torrent_monitor(update, context)
         keyboard = [["Movie", "Show"]]
         await update.message.reply_text("What are we looking for? (Movie/Show)", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
 
