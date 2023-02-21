@@ -1,5 +1,5 @@
 from pb_client import PBSearcher, PBMonitor, TorrentDetails
-from os import path
+import os
 from dataclasses import dataclass
 import json
 
@@ -18,7 +18,7 @@ class JobResult:
 
 
 class MonitorOrchestrator:
-    def __init__(self, monitor_settings_path="./monitor_settings.json") -> None:
+    def __init__(self, monitor_settings_path=os.path.join(os.getcwd(), "data", "monitor_settings.json")) -> None:
         self._monitor_settings_path = monitor_settings_path
         self._settings: list[MonitorSetting] = []
         self.update_monitor_settings_from_json()
@@ -27,7 +27,7 @@ class MonitorOrchestrator:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
-        if not path.exists(self._monitor_settings_path):
+        if not os.path.exists(self._monitor_settings_path):
             open(self._monitor_settings_path, "w")
         with open(self._monitor_settings_path, "r") as f:
             try:
