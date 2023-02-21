@@ -1,36 +1,41 @@
 import os
-from dotenv import load_dotenv
+import asyncio
 from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
 import prettytable as pt
 
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
-from telegram.ext import ApplicationBuilder, ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
 
-from pbclient import TorrentDetails, PBSearcher
+from pb_client import TorrentDetails
+from pb_orchestrator import PBMonitor, PBSearcher, MonitorSetting
 
-from transmission_client import TransmissionClient, download_paths, Torrent
-from transmission_rpc import error as transmission_error
+from transmission_client import Torrent
+
+MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 
 
 @dataclass
 class Storage:
     saved_search_results: list[TorrentDetails]
-    item_chosen: str or None
-    active_torrent: str or None
+
+
+item_chosen: str or None
+active_torrent: str or None
 
 
 class TgBotRunner:
-    def __init__(self, tg_client, torrent_client, torrent_searcher, tg_user_whitelist=None):
+    def __init__(self, tg_client, torrent_client, torrent_searcher, monitors_orchestrator, tg_user_whitelist=None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
         self.torrent_searcher = torrent_searcher
+        self.monitors_orchestrator = monitors_orchestrator
         self.tg_user_whitelist = tg_user_whitelist or []
-        self._storage = Storage([None] * 50, None, None)
+        self._storage = Storage([None] * 50)
 
         auth_handler = MessageHandler(
-            filters.TEXT & ~filters.User(users_whitelist), self.auth_failed)
+            filters.TEXT & ~filters.User(self.tg_user_whitelist), self.auth_failed)
         start_handler = CommandHandler('start', self.start)
         search_handler = CommandHandler('search', self.search_pb)
         search_handler_shortcut = CommandHandler('s', self.search_pb)
@@ -38,6 +43,24 @@ class TgBotRunner:
             'downloads', self.get_recent_downloads)
         downloads_status_handler_shortcut = CommandHandler(
             'd', self.get_recent_downloads)
+        view_monitors_handler = CommandHandler(
+            "list_monitors", self.view_monitors)
+        view_monitors_handler_shortcut = CommandHandler(
+            "lm", self.view_monitors)
+
+        conv_new_monitor_handler = ConversationHandler(
+            entry_points=[CommandHandler(
+                "add_monitor", self.add_monitor), CommandHandler("am", self.add_monitor)],
+            states={
+                MONITOR_TYPE: [MessageHandler(filters.Regex("^Movie|Show$"), self.set_monitor_search_query)],
+                SEARCH_QUERY: [MessageHandler(filters.TEXT, self.set_monitor_silent)],
+                SILENT: [MessageHandler(filters.TEXT, self.get_season_and_episode)],
+                SEASON_AND_EPISODE: [MessageHandler(filters.TEXT, self.set_size_limit)],
+                SIZE_LIMIT: [MessageHandler(filters.TEXT, self.generate_torrent_monitor)],
+            },
+            fallbacks=[CommandHandler("cancel", self.cancel_conversation)]
+        )
+
         magnet_link_handler = MessageHandler(filters.Regex(
             r'magnet:\?xt=.*') & (~filters.COMMAND), self.accept_magnet_link)
         file_torrent_handler = MessageHandler(
@@ -52,12 +75,19 @@ class TgBotRunner:
         self.tg_client.add_handler(search_handler_shortcut)
         self.tg_client.add_handler(downloads_status_handler)
         self.tg_client.add_handler(downloads_status_handler_shortcut)
+        self.tg_client.add_handler(conv_new_monitor_handler)
+        self.tg_client.add_handler(view_monitors_handler)
+        self.tg_client.add_handler(view_monitors_handler_shortcut)
         self.tg_client.add_handler(magnet_link_handler)
         self.tg_client.add_handler(file_torrent_handler)
         self.tg_client.add_handler(CallbackQueryHandler(
             self.callback_full_name, pattern="full_name="))
         self.tg_client.add_handler(CallbackQueryHandler(
             self.callback_mag_link, pattern="mag_link="))
+        self.tg_client.add_handler(CallbackQueryHandler(
+            self.callback_monitor_full_name, pattern="monitor_full_name="))
+        self.tg_client.add_handler(CallbackQueryHandler(
+            self.callback_monitor_delete, pattern="monitor_delete="))
         self.tg_client.add_handler(CallbackQueryHandler(
             self.callback_download_type, pattern="download_type"))
         self.tg_client.add_handler(CallbackQueryHandler(
@@ -102,24 +132,39 @@ class TgBotRunner:
     def get_name_from_magnet(magnet): return parse_qs(
         unquote(magnet))["dn"].pop()
 
+    def send_message(self, chat_id, text, parse_mode="html"):
+        asyncio.get_event_loop().run_until_complete(
+            self.tg_client.bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode))
+
     def get_search_result(self, hash: str):
         try:
             return next(filter(lambda item: item.info_hash == hash, self.saved_search_results))
         except StopIteration:
             return
 
+    def get_active_monitor(self, update: Update) -> MonitorSetting:
+        query = update.callback_query
+        monitor_index = self.get_param_value(query.data)
+        user_monitors = self.monitors_orchestrator.get_user_monitors(
+            update.effective_chat.id)
+        active_monitor = user_monitors[int(monitor_index)]
+        return active_monitor
+
     def clear_storage(self):
         self._storage.item_chosen = None
         self._storage.active_torrent = None
 
     @staticmethod
-    def generate_search_results_keyboard(results: list[TorrentDetails]):
+    def generate_search_results_keyboard(results: list[TorrentDetails], search_query: str) -> list[list[InlineKeyboardButton]]:
         outer_array = []
         for result in results:
             outer_array.append([InlineKeyboardButton(
                 result.name, callback_data=f"full_name={result.info_hash}")])
             outer_array.append([InlineKeyboardButton(f"{result.size_gb:.2f}Gb, {result.seeds}S", url=result.link),
                                 InlineKeyboardButton("📥", callback_data=f"mag_link={result.info_hash}")])
+        search_page_link = "https://thepiratebay.org/search.php?q=" + search_query
+        outer_array += [[InlineKeyboardButton(
+            "Search results page", url=search_page_link)]]
         return outer_array
 
     @staticmethod
@@ -155,17 +200,100 @@ class TgBotRunner:
         if not search_query:
             return await context.bot.send_message(chat_id=update.effective_chat.id,
                                                   text="You need to use this command with search query, like <i>/search Game of thrones s03</i>", parse_mode="html")
-        search_results = searcher.search_torrent(search_query)[:5]
+        search_results = self.torrent_searcher.search_torrent(search_query)[:5]
         if not search_results:
             return await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
         self.saved_search_results = search_results
         text = "here's a top results i've found:"
         results_keyboard = self.generate_search_results_keyboard(
-            search_results)
+            search_results, search_query)
         reply_markup = InlineKeyboardMarkup(results_keyboard)
         await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
 
-    @staticmethod
+    async def generate_torrent_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        text = update.message.text
+        try:
+            context.user_data["size_limit"] = int(text)
+        except ValueError:
+            pass
+        orchestrator_params = {
+            "is_serial": context.user_data["monitor_type"] == "show",
+            "silent": context.user_data["notify"] == "no",
+            "query": context.user_data["search_query"],
+            "owner_id": update.effective_chat.id
+        }
+        if orchestrator_params["is_serial"]:
+            orchestrator_params["season"] = context.user_data["season"]
+            orchestrator_params["episodes_done"] = context.user_data["episodes_done"]
+            orchestrator_params["size_limit"] = context.user_data.get(
+                "size_limit", 0)
+        self.monitors_orchestrator.add_monitor_job_from_dict(
+            orchestrator_params)
+        await context.bot.send_message(
+            chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardMarkup([[]], one_time_keyboard=True))
+
+        return ConversationHandler.END
+
+    async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        search_query = ' '.join(context.args)
+        if search_query:
+            # todo: also check if should be silent
+            context.user_data["notify"] = "yes"
+            context.user_data["monitor_type"] = "movie"
+            context.user_data["search_query"] = search_query
+            return await self.generate_torrent_monitor(update, context)
+        keyboard = [["Movie", "Show"]]
+        await update.message.reply_text("What are we looking for? (Movie/Show)", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+
+        return MONITOR_TYPE
+
+    async def set_monitor_search_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        content_type = update.message.text.lower()
+        context.user_data["monitor_type"] = content_type
+        await update.message.reply_text(f"What's the name of the {content_type}?")
+
+        return SEARCH_QUERY
+
+    async def set_monitor_silent(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        text = update.message.text
+        context.user_data["search_query"] = text
+        keyboard = ReplyKeyboardMarkup([[
+            "Yes", "No"]], one_time_keyboard=True)
+        await update.message.reply_text("Should i notify you when i find it?", reply_markup=keyboard)
+
+        return SILENT
+
+    async def get_season_and_episode(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # TODO: move before silent setting
+        text = update.message.text
+        context.user_data["notify"] = text.lower()
+        if context.user_data["monitor_type"] == "movie":
+            return await self.generate_torrent_monitor(update, context)
+        await update.message.reply_text("What season and episode should i start with? Answer with format SS-EE")
+        return SEASON_AND_EPISODE
+
+    async def set_size_limit(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        try:
+            season, episode = update.message.text.split("-")
+            context.user_data["season"] = int(season)
+            context.user_data["episodes_done"] = int(episode)
+            await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]], one_time_keyboard=True))
+            return SIZE_LIMIT
+        except ValueError:
+            self.get_season_and_episode(update, context)
+
+    async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        await update.message.reply_text("Canceled")
+        return ConversationHandler.END
+
+    async def view_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_monitors: MonitorSetting = self.monitors_orchestrator.get_user_monitors(
+            update.effective_chat.id)
+        keyboard = [[InlineKeyboardButton(str(user_monitor.searcher), callback_data=f"monitor_full_name={index}"), InlineKeyboardButton("🗑️", callback_data=f"monitor_delete={index}")]
+                    for index, user_monitor in enumerate(user_monitors)]
+        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Here are your active monitors:', reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="html")
+
+    @ staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
 
@@ -183,10 +311,10 @@ class TgBotRunner:
     async def callback_download_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         download_type = self.get_param_value(query.data)
+        # TODO: refactor with filters in command handlers
         if query.data.startswith("download_type_search"):
-            magnet_link = searcher.generate_magnet_link(
+            magnet_link = self.torrent_searcher.generate_magnet_link(
                 self.item_chosen)
-            # download_name = self.item_chosen.name
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
             download_name = added_download.name
@@ -195,7 +323,6 @@ class TgBotRunner:
 
         elif query.data.startswith("download_type_maglink"):
             magnet_link = self.active_torrent
-            # download_name = self.get_name_from_magnet(magnet_link)
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
             download_name = added_download.name
@@ -209,6 +336,16 @@ class TgBotRunner:
             await query.answer()
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
         self.clear_storage()
+
+    async def callback_monitor_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        active_monitor = self.get_active_monitor(update)
+        await update.callback_query.answer(str(active_monitor.searcher))
+
+    async def callback_monitor_delete(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+        active_monitor = self.get_active_monitor(update)
+        self.monitors_orchestrator.delete_monitor_job(active_monitor)
+        await update.callback_query.answer("Deleted")
+        await self.view_monitors(update, context)
 
     async def get_recent_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_downloads = self.torrent_client.get_recent_downloads()
@@ -231,8 +368,6 @@ class TgBotRunner:
         save_path = os.path.join(
             os.getcwd(), "torrent-files", update.message.document.file_name)
         await file.download_to_drive(save_path)
-        print(os.path.join(os.getcwd(), "torrent-files",
-              update.message.document.file_name))
         self.active_torrent = save_path
         await self.verify_download_type(update, context, "file")
 
@@ -243,21 +378,3 @@ class TgBotRunner:
     @staticmethod
     async def auth_failed(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id, text="do i know you?")
-
-
-load_dotenv()
-
-tg_client = ApplicationBuilder().token(os.getenv("TG_BOT_TOKEN")).build()
-try:
-    transmission = TransmissionClient(
-        os.getenv("TRANSMISSION_HOST"), download_paths)
-except transmission_error.TransmissionConnectError:
-    raise "can't connect to the host"
-searcher = PBSearcher()
-users_whitelist = [int(uid) for uid in os.getenv("ALLOWED_TG_IDS").split(",")]
-
-runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
-                     torrent_searcher=searcher, tg_user_whitelist=users_whitelist)
-
-if __name__ == "__main__":
-    runner.tg_client.run_polling()
