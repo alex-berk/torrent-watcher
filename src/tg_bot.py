@@ -44,9 +44,9 @@ class TgBotRunner:
         downloads_status_handler_shortcut = CommandHandler(
             'd', self.get_recent_downloads)
         view_monitors_handler = CommandHandler(
-            "view_monitors", self.view_monitors)
+            "list_monitors", self.view_monitors)
         view_monitors_handler_shortcut = CommandHandler(
-            "vm", self.view_monitors)
+            "lm", self.view_monitors)
 
         conv_new_monitor_handler = ConversationHandler(
             entry_points=[CommandHandler(
