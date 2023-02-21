@@ -230,7 +230,7 @@ class TgBotRunner:
         self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
         await context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Added monitor job")
+            chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardMarkup([[]], one_time_keyboard=True))
 
         return ConversationHandler.END
 
