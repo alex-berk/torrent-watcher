@@ -224,7 +224,7 @@ class TgBotRunner:
         }
         if orchestrator_params["is_serial"]:
             orchestrator_params["season"] = context.user_data["season"]
-            orchestrator_params["episodes_done"] = context.user_data["episodes_done"]
+            orchestrator_params["episode_number"] = context.user_data["episode_number"]
             orchestrator_params["size_limit"] = context.user_data.get(
                 "size_limit", 0)
         self.monitors_orchestrator.add_monitor_job_from_dict(
@@ -276,7 +276,7 @@ class TgBotRunner:
         try:
             season, episode = update.message.text.split("-")
             context.user_data["season"] = int(season)
-            context.user_data["episodes_done"] = int(episode)
+            context.user_data["episode_number"] = int(episode)
             await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]], one_time_keyboard=True))
             return SIZE_LIMIT
         except ValueError:

@@ -45,7 +45,7 @@ class MonitorOrchestrator:
                 searcher=PBMonitor(
                     show_name=setting["query"],
                     season_number=setting["season"],
-                    num_episodes_skip=setting["episodes_done"],
+                    episode_number=setting["episode_number"],
                     size_limit_gb=setting["size_limit"],
                 )
             )
@@ -70,7 +70,7 @@ class MonitorOrchestrator:
             setting_obj["query"] = setting.searcher.show_name
             setting_obj["is_serial"] = True
             setting_obj["season"] = setting.searcher.season_number
-            setting_obj["episodes_done"] = setting.searcher.num_episodes_skip
+            setting_obj["episode_number"] = setting.searcher.episode_number
             setting_obj["size_limit"] = setting.searcher.size_limit_gb
 
         return setting_obj
