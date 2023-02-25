@@ -83,6 +83,7 @@ class MonitorOrchestrator:
     def add_monitor_job(self, setting: MonitorSetting) -> None:
         self._settings.append(setting)
         self._save_settings()
+        setting.searcher.look()
 
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
