@@ -5,7 +5,7 @@ from urllib.parse import unquote, parse_qs
 import prettytable as pt
 
 
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
 
 from pb_client import TorrentDetails
@@ -247,7 +247,7 @@ class TgBotRunner:
         self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
         await context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Added monitor job")
+            chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardRemove())
 
         self.run_search_jobs(update.effective_chat.id)
         return ConversationHandler.END
@@ -272,7 +272,7 @@ class TgBotRunner:
     async def set_monitor_search_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         content_type = update.message.text.lower()
         context.user_data["monitor_type"] = content_type
-        await update.message.reply_text(f"What's the name of the {content_type}?")
+        await update.message.reply_text(f"What's the name of the {content_type}?", reply_markup=ReplyKeyboardRemove())
 
         return SEARCH_QUERY
 
@@ -307,7 +307,7 @@ class TgBotRunner:
             await self.get_season_and_episode(update, context)
 
     async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
-        await update.message.reply_text("Canceled")
+        await update.message.reply_text("Canceled", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
     async def view_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -379,7 +379,7 @@ class TgBotRunner:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self.clear_storage()
-        await update.callback_query.edit_message_text("Canceled")
+        await update.callback_query.edit_message_text("Canceled", reply_markup=ReplyKeyboardRemove())
 
         # text / file handlers
     async def accept_magnet_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
