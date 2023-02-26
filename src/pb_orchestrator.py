@@ -45,7 +45,7 @@ class MonitorOrchestrator:
                 searcher=PBMonitor(
                     show_name=setting["query"],
                     season_number=setting["season"],
-                    num_episodes_skip=setting["episodes_done"],
+                    episode_number=setting["episode_number"],
                     size_limit_gb=setting["size_limit"],
                 )
             )
@@ -70,7 +70,7 @@ class MonitorOrchestrator:
             setting_obj["query"] = setting.searcher.show_name
             setting_obj["is_serial"] = True
             setting_obj["season"] = setting.searcher.season_number
-            setting_obj["episodes_done"] = setting.searcher.num_episodes_skip
+            setting_obj["episode_number"] = setting.searcher.episode_number
             setting_obj["size_limit"] = setting.searcher.size_limit_gb
 
         return setting_obj
@@ -92,16 +92,31 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def run_search_jobs(self) -> list[JobResult]:
+    def get_jobs_by_owner_id(self, owner_id) -> filter:
+        jobs_filtered = filter(lambda x: x.owner_id ==
+                               owner_id, self._settings)
+        return jobs_filtered
+
+    def run_search_job_iteration(self, owner_id) -> list[JobResult]:
         self.update_monitor_settings_from_json()
+        eligible_jobs = self.get_jobs_by_owner_id(
+            owner_id) if owner_id else self._settings
         jobs = [JobResult(job.searcher.look(), job)
-                for job in self._settings]
+                for job in eligible_jobs]
         jobs_with_results = list(filter(lambda j: j.result, jobs))
         done_jobs = filter(lambda j: type(j.job_settings.searcher)
                            == PBSearcher, jobs_with_results)
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
         self._save_settings()
         return jobs_with_results
+
+    def run_search_jobs(self, owner_id=None) -> list[JobResult]:
+        jobs_with_results_all = []
+        iteration_result = self.run_search_job_iteration(owner_id)
+        while iteration_result:
+            jobs_with_results_all.extend(iteration_result)
+            iteration_result = self.run_search_job_iteration(owner_id)
+        return jobs_with_results_all
 
 
 if __name__ == "__main__":

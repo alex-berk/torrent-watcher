@@ -59,6 +59,7 @@ class PBSearcher:
         return search_results_formatted
 
     def look(self):
+        print(f"Monitor running: {self}")
         try:
             return self.search_torrent(self.default_query)[0]
         except IndexError:
@@ -66,14 +67,13 @@ class PBSearcher:
 
 
 class PBMonitor(PBSearcher):
-    def __init__(self, show_name: str, season_number: int, num_episodes_skip: int, size_limit_gb: int = None, only_vips=False):
+    def __init__(self, show_name: str, season_number: int, episode_number: int, size_limit_gb: int = None, only_vips=False):
         self.show_name = show_name
         self.season_number = season_number
-        self.num_episodes_skip = num_episodes_skip
+        self.episode_number = episode_number
         self.size_limit_gb = size_limit_gb
         self.only_vips = only_vips
 
-        self.episode_number = self.num_episodes_skip + 1
         self.whitelisted_statuses = (
             "vip",) if self.only_vips else ("vip", "trusted")
 
@@ -91,7 +91,6 @@ class PBMonitor(PBSearcher):
         return self.search_torrent(search_query)
 
     def find_new_episode(self):
-        self.episode_number = self.num_episodes_skip + 1
         available_downloads = self._search_episode()
         if not available_downloads:
             return
@@ -102,12 +101,14 @@ class PBMonitor(PBSearcher):
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
             new_episode = next(available_downloads)
-            self.num_episodes_skip += 1
+            print(f"Monitor {self}: found new episode")
+            self.episode_number += 1
             return new_episode
         except StopIteration:
             return
 
     def look(self):
+        print(f"Monitor running: {self}")
         return self.find_new_episode()
 
 
