@@ -230,7 +230,20 @@ class TgBotRunner:
         self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
         await context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardMarkup([[]], one_time_keyboard=True))
+            chat_id=update.effective_chat.id, text="Added monitor job")
+
+        # TODO: filter jobs by owner id
+        # TODO: add command to run all monitors
+        search_results = self.monitors_orchestrator.run_search_jobs()
+        for found_item in search_results:
+            download_type = "show" if type(
+                found_item.job_settings.searcher) == PBMonitor else "movie"
+            magnet_link = self.torrent_searcher.generate_magnet_link(
+                found_item.result)
+            print(found_item.result, download_type)
+            self.torrent_client.add_download(magnet_link, download_type)
+            await context.bot.send_message(chat_id=update.effective_chat.id,
+                                           text=f"Monitor added new download!\n<b>{found_item.result.name}</b>", parse_mode="html")
 
         return ConversationHandler.END
 
@@ -280,7 +293,9 @@ class TgBotRunner:
             await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]], one_time_keyboard=True))
             return SIZE_LIMIT
         except ValueError:
-            self.get_season_and_episode(update, context)
+            await update.message.reply_text(
+                "Can't understand it. Please, pay attention to the format")
+            await self.get_season_and_episode(update, context)
 
     async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
         await update.message.reply_text("Canceled")

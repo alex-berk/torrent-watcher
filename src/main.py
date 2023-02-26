@@ -11,7 +11,7 @@ from telegram.ext import ApplicationBuilder
 from tg_bot import TgBotRunner
 
 load_dotenv()
-PERIOD_SECONDS = 60 * 60 * 24
+PERIOD_SECONDS = 60 * 60 * 8
 
 torrent_searcher = PBSearcher()
 monitors_orchestrator = MonitorOrchestrator()
@@ -40,7 +40,7 @@ def run_search_jobs_on_timer(timer_seconds):
         transmission.add_download(magnet_link, download_type)
         if not found_item.job_settings.silent:
             runner.send_message(found_item.job_settings.owner_id,
-                                text=f"Monitor added new download!\n<b>{found_item.result.name}</b>")
+                                text=f"Monitor added new download!\n<b>{found_item.result.name}</b>", parse_mode="html")
     if search_results:
         sleep(5)
         run_search_jobs_on_timer(timer_seconds)

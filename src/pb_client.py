@@ -101,6 +101,7 @@ class PBMonitor(PBSearcher):
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
             new_episode = next(available_downloads)
+            print(f"Monitor {self}: found new episode")
             self.episode_number += 1
             return new_episode
         except StopIteration:

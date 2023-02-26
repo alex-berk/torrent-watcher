@@ -83,7 +83,6 @@ class MonitorOrchestrator:
     def add_monitor_job(self, setting: MonitorSetting) -> None:
         self._settings.append(setting)
         self._save_settings()
-        setting.searcher.look()
 
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
@@ -93,7 +92,7 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def run_search_jobs(self) -> list[JobResult]:
+    def run_search_job_iteration(self) -> list[JobResult]:
         self.update_monitor_settings_from_json()
         jobs = [JobResult(job.searcher.look(), job)
                 for job in self._settings]
@@ -103,6 +102,14 @@ class MonitorOrchestrator:
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
         self._save_settings()
         return jobs_with_results
+
+    def run_search_jobs(self) -> list[JobResult]:
+        jobs_with_results_all = []
+        iteration_result = self.run_search_job_iteration()
+        while iteration_result:
+            jobs_with_results_all.extend(iteration_result)
+            iteration_result = self.run_search_job_iteration()
+        return jobs_with_results_all
 
 
 if __name__ == "__main__":
