@@ -34,6 +34,7 @@ class TgBotRunner:
         self.tg_user_whitelist = tg_user_whitelist or []
         self._storage = Storage([None] * 50)
 
+        # TODO: refactor with filters in command handlers
         auth_handler = MessageHandler(
             filters.TEXT & ~filters.User(self.tg_user_whitelist), self.auth_failed)
         start_handler = CommandHandler('start', self.start)
@@ -47,6 +48,10 @@ class TgBotRunner:
             "list_monitors", self.view_monitors)
         view_monitors_handler_shortcut = CommandHandler(
             "lm", self.view_monitors)
+        run_monitors_handler = CommandHandler(
+            "run_monitors", self.run_user_monitors)
+        run_monitors_handler_shortcut = CommandHandler(
+            "rm", self.run_user_monitors)
 
         conv_new_monitor_handler = ConversationHandler(
             entry_points=[CommandHandler(
@@ -78,6 +83,8 @@ class TgBotRunner:
         self.tg_client.add_handler(conv_new_monitor_handler)
         self.tg_client.add_handler(view_monitors_handler)
         self.tg_client.add_handler(view_monitors_handler_shortcut)
+        self.tg_client.add_handler(run_monitors_handler)
+        self.tg_client.add_handler(run_monitors_handler_shortcut)
         self.tg_client.add_handler(magnet_link_handler)
         self.tg_client.add_handler(file_torrent_handler)
         self.tg_client.add_handler(CallbackQueryHandler(
@@ -149,6 +156,17 @@ class TgBotRunner:
             update.effective_chat.id)
         active_monitor = user_monitors[int(monitor_index)]
         return active_monitor
+
+    async def run_search_jobs(self, job_owner_id: int):
+        search_results = self.monitors_orchestrator.run_search_jobs()
+        for found_item in search_results:
+            download_type = "show" if type(
+                found_item.job_settings.searcher) == PBMonitor else "movie"
+            magnet_link = self.torrent_searcher.generate_magnet_link(
+                found_item.result)
+            self.torrent_client.add_download(magnet_link, download_type)
+            await self.send_message(chat_id=job_owner_id,
+                                    text=f"Monitor added new download!\n<b>{found_item.result.name}</b>", parse_mode="html")
 
     def clear_storage(self):
         self._storage.item_chosen = None
@@ -232,20 +250,12 @@ class TgBotRunner:
         await context.bot.send_message(
             chat_id=update.effective_chat.id, text="Added monitor job")
 
-        # TODO: filter jobs by owner id
-        # TODO: add command to run all monitors
-        search_results = self.monitors_orchestrator.run_search_jobs()
-        for found_item in search_results:
-            download_type = "show" if type(
-                found_item.job_settings.searcher) == PBMonitor else "movie"
-            magnet_link = self.torrent_searcher.generate_magnet_link(
-                found_item.result)
-            print(found_item.result, download_type)
-            self.torrent_client.add_download(magnet_link, download_type)
-            await context.bot.send_message(chat_id=update.effective_chat.id,
-                                           text=f"Monitor added new download!\n<b>{found_item.result.name}</b>", parse_mode="html")
-
+        await self.run_search_jobs(update.effective_chat.id)
         return ConversationHandler.END
+
+    async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        await self.run_search_jobs(update.effective_chat.id)
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="ran all monitors")
 
     async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         search_query = ' '.join(context.args)
@@ -326,7 +336,6 @@ class TgBotRunner:
     async def callback_download_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         download_type = self.get_param_value(query.data)
-        # TODO: refactor with filters in command handlers
         if query.data.startswith("download_type_search"):
             magnet_link = self.torrent_searcher.generate_magnet_link(
                 self.item_chosen)
