@@ -157,16 +157,15 @@ class TgBotRunner:
         active_monitor = user_monitors[int(monitor_index)]
         return active_monitor
 
-    async def run_search_jobs(self, job_owner_id: int):
-        search_results = self.monitors_orchestrator.run_search_jobs()
+    def run_search_jobs(self, job_owner_id: int):
+        search_results = self.monitors_orchestrator.run_search_jobs(
+            job_owner_id)
         for found_item in search_results:
             download_type = "show" if type(
                 found_item.job_settings.searcher) == PBMonitor else "movie"
             magnet_link = self.torrent_searcher.generate_magnet_link(
                 found_item.result)
             self.torrent_client.add_download(magnet_link, download_type)
-            await self.send_message(chat_id=job_owner_id,
-                                    text=f"Monitor added new download!\n<b>{found_item.result.name}</b>", parse_mode="html")
 
     def clear_storage(self):
         self._storage.item_chosen = None
@@ -250,11 +249,11 @@ class TgBotRunner:
         await context.bot.send_message(
             chat_id=update.effective_chat.id, text="Added monitor job")
 
-        await self.run_search_jobs(update.effective_chat.id)
+        self.run_search_jobs(update.effective_chat.id)
         return ConversationHandler.END
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await self.run_search_jobs(update.effective_chat.id)
+        self.run_search_jobs(update.effective_chat.id)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="ran all monitors")
 
     async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
