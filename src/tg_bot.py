@@ -38,6 +38,7 @@ class TgBotRunner:
         auth_handler = MessageHandler(
             filters.TEXT & ~filters.User(self.tg_user_whitelist), self.auth_failed)
         start_handler = CommandHandler('start', self.start)
+        cancel_handler = CommandHandler('cancel', self.cancel)
         search_handler = CommandHandler('search', self.search_pb)
         search_handler_shortcut = CommandHandler('s', self.search_pb)
         downloads_status_handler = CommandHandler(
@@ -76,6 +77,7 @@ class TgBotRunner:
 
         self.tg_client.add_handler(auth_handler)
         self.tg_client.add_handler(start_handler)
+        self.tg_client.add_handler(cancel_handler)
         self.tg_client.add_handler(search_handler)
         self.tg_client.add_handler(search_handler_shortcut)
         self.tg_client.add_handler(downloads_status_handler)
@@ -379,7 +381,7 @@ class TgBotRunner:
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self.clear_storage()
-        await update.callback_query.edit_message_text("Canceled", reply_markup=ReplyKeyboardRemove())
+        await context.bot.send_message(chat_id=update.effective_chat.id, text="Canceled", reply_markup=ReplyKeyboardRemove())
 
         # text / file handlers
     async def accept_magnet_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
