@@ -111,7 +111,7 @@ class MonitorOrchestrator:
         return jobs_with_results
 
     def run_search_jobs(self, owner_id=None) -> list[JobResult]:
-        jobs_with_results_all = []
+        jobs_with_results_all: list[JobResult] = []
         iteration_result = self.run_search_job_iteration(owner_id)
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
