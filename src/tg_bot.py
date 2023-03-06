@@ -342,7 +342,7 @@ class TgBotRunner:
                 self.item_chosen)
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            download_name = added_download.name
+            download_name = added_download.get("name", "No torrent was added")
             await query.answer()
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
 
@@ -350,7 +350,7 @@ class TgBotRunner:
             magnet_link = self.active_torrent
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            download_name = added_download.name
+            download_name = added_download.get("name", "No torrent was added")
             await query.answer()
             await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
 
@@ -391,7 +391,7 @@ class TgBotRunner:
     async def save_torrent_file(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await context.bot.get_file(update.message.document)
         save_path = os.path.join(
-            os.getcwd(), "torrent-files", update.message.document.file_name)
+            os.getcwd(), "data", "torrent-files", update.message.document.file_name)
         await file.download_to_drive(save_path)
         self.active_torrent = save_path
         await self.verify_download_type(update, context, "file")

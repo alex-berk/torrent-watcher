@@ -20,9 +20,12 @@ class TransmissionClient(Client):
         torrent_age_days = (current_date - torrent_date).days
         return torrent_age_days <= 3 or torrent.status in self._pending_statuses
 
-    def add_download(self, magnet_link: str, download_type: str) -> Torrent:
+    def add_download(self, magnet_link: str, download_type: str) -> Torrent | None:
         download_dir = download_paths[download_type]
-        download = self.add_torrent(magnet_link, download_dir=download_dir)
+        try:
+            download = self.add_torrent(magnet_link, download_dir=download_dir)
+        except transmission_error.TransmissionError:
+            return
         return download
 
     def download_from_file(self, filename, download_type) -> Torrent:
