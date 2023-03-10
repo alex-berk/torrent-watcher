@@ -342,24 +342,37 @@ class TgBotRunner:
                 self.item_chosen)
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            download_name = added_download.get("name", "No torrent was added")
-            await query.answer()
-            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            try:
+                download_name = added_download.name
+                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            except AttributeError:
+                await query.edit_message_text(text=f"Error getting name of the download")
+            finally:
+                await query.answer()
 
         elif query.data.startswith("download_type_maglink"):
             magnet_link = self.active_torrent
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            download_name = added_download.get("name", "No torrent was added")
-            await query.answer()
-            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            try:
+                download_name = added_download.name
+                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            except AttributeError:
+                await query.edit_message_text(text=f"Error getting name of the download")
+            finally:
+                await query.answer()
 
         elif query.data.startswith("download_type_file"):
             added_download = self.torrent_client.download_from_file(
                 self.active_torrent, download_type)
-            download_name = added_download.name
-            await query.answer()
-            await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            try:
+                download_name = added_download.name
+                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
+            except AttributeError:
+                await query.edit_message_text(text=f"Error getting name of the download")
+            finally:
+                await query.answer()
+
         self.clear_storage()
 
     async def callback_monitor_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
