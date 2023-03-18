@@ -27,6 +27,7 @@ class MonitorOrchestrator:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
+        # TODO: refactor, make sure file closed after use, remove "except json.decoder.JSONDecodeError"
         if not os.path.exists(self._monitor_settings_path):
             open(self._monitor_settings_path, "w")
         with open(self._monitor_settings_path, "r") as f:
@@ -93,6 +94,7 @@ class MonitorOrchestrator:
         self.add_monitor_job(settings)
 
     def get_jobs_by_owner_id(self, owner_id) -> filter:
+        self.update_monitor_settings_from_json()
         jobs_filtered = filter(lambda x: x.owner_id ==
                                owner_id, self._settings)
         return jobs_filtered
