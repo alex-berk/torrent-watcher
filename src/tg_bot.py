@@ -188,13 +188,13 @@ class TgBotRunner:
 
     @staticmethod
     def generate_progress_table(torrents: list[Torrent]) -> str:
-        table = pt.PrettyTable(["name", "size", "status", "progress",])
+        table = pt.PrettyTable(["name", "size", "progress",])
         table.align["name"] = "l"
         table.align["size"] = "l"
-        table.max_table_width = 70
-        table.max_width["name"] = 40
-        [table.add_row((torrent.name, f"{torrent.size_when_done / (8**10):.2f}Gb",
-                        torrent.status, f"{torrent.progress}%")) for torrent in torrents]
+        table.max_table_width = 65
+        table.max_width["name"] = 50
+        [table.add_row((torrent.name, f"{torrent.size_when_done / (10**9):.2f}Gb",
+                        f"{torrent.progress}%")) for torrent in torrents]
         return str(table)
 
     # Handler functions
