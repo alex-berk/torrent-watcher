@@ -3,14 +3,14 @@ from multiprocessing import Process
 from time import sleep
 from dotenv import load_dotenv
 
-from transmission_client import TransmissionClient, download_paths, transmission_error
-from pb_orchestrator import MonitorOrchestrator, PBMonitor
+from transmission_client import TransmissionClient, DOWNLOAD_PATHS, transmission_error
+from pb_orchestrator import MonitorOrchestrator
 from pb_client import PBSearcher
 
 from telegram.ext import ApplicationBuilder
 from tg_bot import TgBotRunner
 
-load_dotenv()
+load_dotenv()  # loads MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH, TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
 PERIOD_SECONDS = 60 * 60 * 8
 
 torrent_searcher = PBSearcher()
@@ -18,7 +18,7 @@ monitors_orchestrator = MonitorOrchestrator()
 
 try:
     transmission = TransmissionClient(
-        os.getenv("TRANSMISSION_HOST"), download_paths)
+        os.getenv("TRANSMISSION_HOST"), DOWNLOAD_PATHS)
 except transmission_error.TransmissionConnectError:
     raise "can't connect to the host"
 
@@ -31,13 +31,9 @@ runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
 
 
 def run_search_jobs_on_timer(timer_seconds):
-    search_results = runner.run_search_jobs(admin_tgid)
-    if search_results:
-        sleep(5)
-        run_search_jobs_on_timer(timer_seconds)
-    else:
-        sleep(timer_seconds)
-        run_search_jobs_on_timer(timer_seconds)
+    search_results = runner.download_new_finds(admin_tgid)
+    sleep(5 if search_results else timer_seconds)
+    run_search_jobs_on_timer(timer_seconds)
 
 
 def bot_poll():

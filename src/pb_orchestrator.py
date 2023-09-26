@@ -27,18 +27,17 @@ class MonitorOrchestrator:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
-        # TODO: refactor, make sure file closed after use, remove "except json.decoder.JSONDecodeError"
         if not os.path.exists(self._monitor_settings_path):
-            open(self._monitor_settings_path, "w")
+            with open(self._monitor_settings_path, "w") as f:
+                f.write("[]")
+
         with open(self._monitor_settings_path, "r") as f:
-            try:
-                settings = json.load(f)
-            except json.decoder.JSONDecodeError:
-                settings = []
+            settings = json.load(f)
             self._settings = list(map(self._dict_to_setting, settings))
 
     @staticmethod
-    def _dict_to_setting(setting) -> MonitorSetting:
+    def _dict_to_setting(setting: dict) -> MonitorSetting:
+        # TODO: rename "is_serial" to "monitor_type", refactor into settings_factory(setting.is_serial)
         if setting.get("is_serial", True):
             return MonitorSetting(
                 owner_id=setting["owner_id"],
@@ -59,12 +58,12 @@ class MonitorOrchestrator:
         )
 
     @staticmethod
-    def _setting_to_dict(setting) -> dict:
+    def _setting_to_dict(setting: MonitorSetting) -> dict:
         setting_obj = {
             "owner_id": setting.owner_id,
             "silent": setting.silent,
         }
-        if type(setting.searcher) == PBSearcher:
+        if setting.searcher.type == "movie":
             setting_obj["query"] = setting.searcher.default_query
             setting_obj["is_serial"] = False
         else:
@@ -93,7 +92,7 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def get_jobs_by_owner_id(self, owner_id) -> filter:
+    def get_jobs_by_owner_id(self, owner_id) -> filter[MonitorSetting]:
         self.update_monitor_settings_from_json()
         jobs_filtered = filter(lambda x: x.owner_id ==
                                owner_id, self._settings)

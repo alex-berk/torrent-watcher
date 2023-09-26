@@ -14,14 +14,14 @@ class TransmissionClient(Client):
     _pending_statuses = ['downloading',
                          'download pending', 'check pending', 'checking',]
 
-    def _filter_torrents_list(self, torrent: Torrent) -> bool:
+    def _filter_fresh_torrents(self, torrent: Torrent) -> bool:
         torrent_date = torrent.date_added.replace(tzinfo=None)
         current_date = datetime.today()
         torrent_age_days = (current_date - torrent_date).days
         return torrent_age_days <= 3 or torrent.status in self._pending_statuses
 
     def add_download(self, magnet_link: str, download_type: str) -> Torrent | None:
-        download_dir = download_paths[download_type]
+        download_dir = DOWNLOAD_PATHS[download_type]
         try:
             download = self.add_torrent(magnet_link, download_dir=download_dir)
         except transmission_error.TransmissionError:
@@ -43,11 +43,11 @@ class TransmissionClient(Client):
     def get_recent_downloads(self) -> list[Torrent]:
         torrents = self.get_torrents()
         pending_torrents = filter(
-            self._filter_torrents_list, torrents)
+            self._filter_fresh_torrents, torrents)
         return tuple(pending_torrents)
 
 
-download_paths = {
+DOWNLOAD_PATHS = {
     "movie": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "movies"),
     "show": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "shows"),
     "video": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "videos"),
@@ -56,9 +56,8 @@ download_paths = {
 
 if __name__ == "__main__":
     try:
-        c = TransmissionClient(os.getenv("TRANSMISSION_HOST"), download_paths)
+        c = TransmissionClient(os.getenv("TRANSMISSION_HOST"), DOWNLOAD_PATHS)
         torrents = c.get_recent_downloads()
-        # torrents = c.get_torrents()
         for torrent in torrents:
             print(torrent)
     except transmission_error.TransmissionConnectError:

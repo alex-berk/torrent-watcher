@@ -31,6 +31,7 @@ class PBSearcher:
 
     def __init__(self, default_query=None) -> None:
         self.default_query = default_query
+        self.type = "movie"
 
     def __repr__(self) -> str:
         return f"(M) / {self.default_query}"
@@ -68,6 +69,7 @@ class PBSearcher:
 
 class PBMonitor(PBSearcher):
     def __init__(self, show_name: str, season_number: int, episode_number: int, size_limit_gb: int = None, only_vips=False):
+        self.type = "show"
         self.show_name = show_name
         self.season_number = season_number
         self.episode_number = episode_number
