@@ -1,9 +1,7 @@
 from transmission_rpc import Client, Torrent, error as transmission_error
-import os
-from dotenv import load_dotenv
+from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH, TRANSMISSION_HOST
+from os import path
 from datetime import datetime
-
-load_dotenv()
 
 
 class TransmissionClient(Client):
@@ -48,15 +46,15 @@ class TransmissionClient(Client):
 
 
 DOWNLOAD_PATHS = {
-    "movie": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "movies"),
-    "show": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "shows"),
-    "video": os.path.join(os.getenv("MEDIA_DOWNLOAD_PATH"), "videos"),
-    "other": os.getenv("REGULAR_DOWNLOAD_PATH"),
+    "movie": path.join(MEDIA_DOWNLOAD_PATH, "movies"),
+    "show": path.join(MEDIA_DOWNLOAD_PATH, "shows"),
+    "video": path.join(MEDIA_DOWNLOAD_PATH, "videos"),
+    "other": REGULAR_DOWNLOAD_PATH,
 }
 
 if __name__ == "__main__":
     try:
-        c = TransmissionClient(os.getenv("TRANSMISSION_HOST"), DOWNLOAD_PATHS)
+        c = TransmissionClient(TRANSMISSION_HOST, DOWNLOAD_PATHS)
         torrents = c.get_recent_downloads()
         for torrent in torrents:
             print(torrent)

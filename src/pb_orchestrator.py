@@ -1,3 +1,4 @@
+from typing import Generator
 from pb_client import PBSearcher, PBMonitor, TorrentDetails
 import os
 from dataclasses import dataclass
@@ -92,7 +93,7 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def get_jobs_by_owner_id(self, owner_id) -> filter[MonitorSetting]:
+    def get_jobs_by_owner_id(self, owner_id) -> Generator[MonitorSetting, None, None]:
         self.update_monitor_settings_from_json()
         jobs_filtered = filter(lambda x: x.owner_id ==
                                owner_id, self._settings)
