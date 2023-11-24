@@ -12,6 +12,8 @@ class TorrentDetails:
     status: str
     info_hash: str
 
+# TODO: add an ABC class for monitor with look() abstr method
+
 
 class PBSearcher:
     _search_host = "https://apibay.org/q.php"
@@ -31,6 +33,7 @@ class PBSearcher:
 
     def __init__(self, default_query=None) -> None:
         self.default_query = default_query
+        self.type = "movie"
 
     def __repr__(self) -> str:
         return f"(M) / {self.default_query}"
@@ -41,10 +44,18 @@ class PBSearcher:
         link = f"magnet:?xt=urn:btih:{torrent_details.info_hash}&dn={torrent_details.name}{trackers_list_formatted}"
         return link
 
-    def search_torrent(self, query: str) -> list[TorrentDetails]:
-        r = requests.get(self._search_host, params={"q": query})
+    def search_torrent(self, query: str = None) -> list[TorrentDetails]:
+        if not query:
+            query = self.default_query
+        try:
+            r = requests.get(self._search_host, params={"q": query}, timeout=1)
+        except requests.exceptions.ReadTimeout:
+            return []
+        if r.status_code != 200:
+            return []
         search_results = json.loads(r.text)
-        if len(search_results) == 1 and search_results[0]["name"] == "No results returned":
+        if len(search_results) == 1 and \
+                search_results[0]["name"] == "No results returned":
             return []
         search_results_formatted = [TorrentDetails(
             result["name"],
@@ -58,7 +69,8 @@ class PBSearcher:
             search_results_formatted, key=lambda x: x.seeds, reverse=True)
         return search_results_formatted
 
-    def look(self):
+    def look(self) -> TorrentDetails | None:
+        # TODO: test with empty results and with 404
         print(f"Monitor running: {self}")
         try:
             return self.search_torrent(self.default_query)[0]
@@ -68,6 +80,7 @@ class PBSearcher:
 
 class PBMonitor(PBSearcher):
     def __init__(self, show_name: str, season_number: int, episode_number: int, size_limit_gb: int = None, only_vips=False):
+        self.type = "show"
         self.show_name = show_name
         self.season_number = season_number
         self.episode_number = episode_number
@@ -84,13 +97,15 @@ class PBMonitor(PBSearcher):
         return " / ".join(items)
 
     def _generate_search_query(self) -> str:
+        # TODO: test edge cases in number of ep and seasons
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
 
-    def _search_episode(self) -> tuple[TorrentDetails]:
+    def _search_episode(self) -> list[TorrentDetails]:
         search_query = self._generate_search_query()
         return self.search_torrent(search_query)
 
-    def find_new_episode(self):
+    def _find_new_episode(self) -> TorrentDetails | None:
+        # TODO: test with no, 1, and multiple new episodes
         available_downloads = self._search_episode()
         if not available_downloads:
             return
@@ -102,21 +117,21 @@ class PBMonitor(PBSearcher):
         try:
             new_episode = next(available_downloads)
             print(f"Monitor {self}: found new episode")
-            self.episode_number += 1
+            self.episode_number += 1  # TODO: consider moving to separate self.update() method
             return new_episode
         except StopIteration:
             return
 
-    def look(self):
+    def look(self) -> TorrentDetails | None:
         print(f"Monitor running: {self}")
-        return self.find_new_episode()
+        return self._find_new_episode()
 
 
 if __name__ == "__main__":
-    s = PBSearcher()
-    results = s.search_torrent("akira")
+    s = PBSearcher("akira")
+    results = s.look()
     [print(result) for result in results[:10]]
 
     w = PBMonitor("chainsaw man 1080p", 1, 5, 4)
-    new_ep = w.find_new_episode()
+    new_ep = w.look()
     print(new_ep)

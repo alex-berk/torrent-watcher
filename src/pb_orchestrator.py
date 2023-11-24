@@ -1,3 +1,4 @@
+from typing import Generator
 from pb_client import PBSearcher, PBMonitor, TorrentDetails
 import os
 from dataclasses import dataclass
@@ -18,8 +19,10 @@ class JobResult:
 
 
 class MonitorOrchestrator:
-    def __init__(self, monitor_settings_path=os.path.join(os.getcwd(), "data", "monitor_settings.json")) -> None:
-        self._monitor_settings_path = monitor_settings_path
+    # TODO: test if monitor settings are being updated after each new result
+    def __init__(self, monitor_settings_path=None) -> None:
+        self._monitor_settings_path = monitor_settings_path or \
+            os.path.join(os.getcwd(), "data", "monitor_settings.json")
         self._settings: list[MonitorSetting] = []
         self.update_monitor_settings_from_json()
 
@@ -27,18 +30,17 @@ class MonitorOrchestrator:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
-        # TODO: refactor, make sure file closed after use, remove "except json.decoder.JSONDecodeError"
         if not os.path.exists(self._monitor_settings_path):
-            open(self._monitor_settings_path, "w")
+            with open(self._monitor_settings_path, "w") as f:
+                f.write("[]")
+
         with open(self._monitor_settings_path, "r") as f:
-            try:
-                settings = json.load(f)
-            except json.decoder.JSONDecodeError:
-                settings = []
+            settings = json.load(f)
             self._settings = list(map(self._dict_to_setting, settings))
 
     @staticmethod
-    def _dict_to_setting(setting) -> MonitorSetting:
+    def _dict_to_setting(setting: dict) -> MonitorSetting:
+        # TODO: rename "is_serial" to "monitor_type", refactor into settings_factory(setting.is_serial)
         if setting.get("is_serial", True):
             return MonitorSetting(
                 owner_id=setting["owner_id"],
@@ -59,12 +61,12 @@ class MonitorOrchestrator:
         )
 
     @staticmethod
-    def _setting_to_dict(setting) -> dict:
+    def _setting_to_dict(setting: MonitorSetting) -> dict:
         setting_obj = {
             "owner_id": setting.owner_id,
             "silent": setting.silent,
         }
-        if type(setting.searcher) == PBSearcher:
+        if setting.searcher.type == "movie":
             setting_obj["query"] = setting.searcher.default_query
             setting_obj["is_serial"] = False
         else:
@@ -81,10 +83,12 @@ class MonitorOrchestrator:
             settings_json = list(map(self._setting_to_dict, self._settings))
             json.dump(settings_json, f, indent=2)
 
+    # TODO: refactor to __add__
     def add_monitor_job(self, setting: MonitorSetting) -> None:
         self._settings.append(setting)
         self._save_settings()
 
+    # TODO: refactor to __sub__
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
         self._save_settings()
@@ -93,7 +97,7 @@ class MonitorOrchestrator:
         settings = self._dict_to_setting(settings_dict)
         self.add_monitor_job(settings)
 
-    def get_jobs_by_owner_id(self, owner_id) -> filter:
+    def get_jobs_by_owner_id(self, owner_id) -> Generator[MonitorSetting, None, None]:
         self.update_monitor_settings_from_json()
         jobs_filtered = filter(lambda x: x.owner_id ==
                                owner_id, self._settings)
@@ -106,6 +110,7 @@ class MonitorOrchestrator:
         jobs = [JobResult(job.searcher.look(), job)
                 for job in eligible_jobs]
         jobs_with_results = list(filter(lambda j: j.result, jobs))
+        # TODO: checking if job is done should be moved (maybe to the job instance itself)
         done_jobs = filter(lambda j: type(j.job_settings.searcher)
                            == PBSearcher, jobs_with_results)
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
@@ -119,7 +124,3 @@ class MonitorOrchestrator:
             jobs_with_results_all.extend(iteration_result)
             iteration_result = self.run_search_job_iteration(owner_id)
         return jobs_with_results_all
-
-
-if __name__ == "__main__":
-    o = MonitorOrchestrator()

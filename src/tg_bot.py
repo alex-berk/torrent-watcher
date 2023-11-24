@@ -9,9 +9,9 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKe
 from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
 
 from pb_client import TorrentDetails
-from pb_orchestrator import PBMonitor, PBSearcher, MonitorSetting
+from pb_orchestrator import PBSearcher, MonitorSetting, MonitorOrchestrator, JobResult
 
-from transmission_client import Torrent
+from transmission_client import Torrent, TransmissionClient
 
 MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 
@@ -26,7 +26,9 @@ active_torrent: str or None
 
 
 class TgBotRunner:
-    def __init__(self, tg_client, torrent_client, torrent_searcher, monitors_orchestrator, tg_user_whitelist=None):
+    # TODO: consider, if torrent_searcher and torrent_client should be passed to class
+    # maybe, use factory pattern
+    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher, monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
         self.torrent_searcher = torrent_searcher
@@ -159,15 +161,15 @@ class TgBotRunner:
         active_monitor = user_monitors[int(monitor_index)]
         return active_monitor
 
-    def run_search_jobs(self, job_owner_id: int):
+    def download_new_finds(self, job_owner_id: int) -> list[JobResult]:
         search_results = self.monitors_orchestrator.run_search_jobs(
             job_owner_id)
         for found_item in search_results:
-            download_type = "show" if type(
-                found_item.job_settings.searcher) == PBMonitor else "movie"
             magnet_link = self.torrent_searcher.generate_magnet_link(
                 found_item.result)
+            download_type = found_item.job_settings.searcher.type
             self.torrent_client.add_download(magnet_link, download_type)
+        return search_results
 
     def clear_storage(self):
         self._storage.item_chosen = None
@@ -250,12 +252,13 @@ class TgBotRunner:
             orchestrator_params)
         await context.bot.send_message(
             chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardRemove())
+        # doesn't exit the context and goes into recursion
 
-        self.run_search_jobs(update.effective_chat.id)
+        self.download_new_finds(update.effective_chat.id)
         return ConversationHandler.END
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        self.run_search_jobs(update.effective_chat.id)
+        self.download_new_finds(update.effective_chat.id)
         await context.bot.send_message(chat_id=update.effective_chat.id, text="ran all monitors")
 
     async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -272,6 +275,7 @@ class TgBotRunner:
         return MONITOR_TYPE
 
     async def set_monitor_search_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # TODO: check for handling invalid input
         content_type = update.message.text.lower()
         context.user_data["monitor_type"] = content_type
         await update.message.reply_text(f"What's the name of the {content_type}?", reply_markup=ReplyKeyboardRemove())
