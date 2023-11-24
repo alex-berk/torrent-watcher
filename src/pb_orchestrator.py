@@ -19,8 +19,10 @@ class JobResult:
 
 
 class MonitorOrchestrator:
-    def __init__(self, monitor_settings_path=os.path.join(os.getcwd(), "data", "monitor_settings.json")) -> None:
-        self._monitor_settings_path = monitor_settings_path
+    # TODO: test if monitor settings are being updated after each new result
+    def __init__(self, monitor_settings_path=None) -> None:
+        self._monitor_settings_path = monitor_settings_path or \
+            os.path.join(os.getcwd(), "data", "monitor_settings.json")
         self._settings: list[MonitorSetting] = []
         self.update_monitor_settings_from_json()
 
@@ -81,10 +83,12 @@ class MonitorOrchestrator:
             settings_json = list(map(self._setting_to_dict, self._settings))
             json.dump(settings_json, f, indent=2)
 
+    # TODO: refactor to __add__
     def add_monitor_job(self, setting: MonitorSetting) -> None:
         self._settings.append(setting)
         self._save_settings()
 
+    # TODO: refactor to __sub__
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
         self._save_settings()
@@ -106,6 +110,7 @@ class MonitorOrchestrator:
         jobs = [JobResult(job.searcher.look(), job)
                 for job in eligible_jobs]
         jobs_with_results = list(filter(lambda j: j.result, jobs))
+        # TODO: checking if job is done should be moved (maybe to the job instance itself)
         done_jobs = filter(lambda j: type(j.job_settings.searcher)
                            == PBSearcher, jobs_with_results)
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
@@ -119,7 +124,3 @@ class MonitorOrchestrator:
             jobs_with_results_all.extend(iteration_result)
             iteration_result = self.run_search_job_iteration(owner_id)
         return jobs_with_results_all
-
-
-if __name__ == "__main__":
-    o = MonitorOrchestrator()

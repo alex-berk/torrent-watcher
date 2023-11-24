@@ -8,10 +8,10 @@ import prettytable as pt
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
 
-from pb_client import TransmissionClient, TorrentDetails
+from pb_client import TorrentDetails
 from pb_orchestrator import PBSearcher, MonitorSetting, MonitorOrchestrator, JobResult
 
-from transmission_client import Torrent
+from transmission_client import Torrent, TransmissionClient
 
 MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 
@@ -26,6 +26,8 @@ active_torrent: str or None
 
 
 class TgBotRunner:
+    # TODO: consider, if torrent_searcher and torrent_client should be passed to class
+    # maybe, use factory pattern
     def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher, monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
@@ -250,6 +252,7 @@ class TgBotRunner:
             orchestrator_params)
         await context.bot.send_message(
             chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardRemove())
+        # doesn't exit the context and goes into recursion
 
         self.download_new_finds(update.effective_chat.id)
         return ConversationHandler.END
@@ -272,6 +275,7 @@ class TgBotRunner:
         return MONITOR_TYPE
 
     async def set_monitor_search_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
+        # TODO: check for handling invalid input
         content_type = update.message.text.lower()
         context.user_data["monitor_type"] = content_type
         await update.message.reply_text(f"What's the name of the {content_type}?", reply_markup=ReplyKeyboardRemove())

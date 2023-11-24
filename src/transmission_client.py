@@ -1,5 +1,6 @@
 from transmission_rpc import Client, Torrent, error as transmission_error
 from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH, TRANSMISSION_HOST
+from unittest.mock import patch, Mock
 from os import path
 from datetime import datetime
 
@@ -13,7 +14,7 @@ class TransmissionClient(Client):
                          'download pending', 'check pending', 'checking',]
 
     def _filter_fresh_torrents(self, torrent: Torrent) -> bool:
-        torrent_date = torrent.date_added.replace(tzinfo=None)
+        torrent_date = torrent.added_date.replace(tzinfo=None)
         current_date = datetime.today()
         torrent_age_days = (current_date - torrent_date).days
         return torrent_age_days <= 3 or torrent.status in self._pending_statuses
@@ -45,6 +46,7 @@ class TransmissionClient(Client):
         return tuple(pending_torrents)
 
 
+# TODO: ?move inside the class, expose for easy export
 DOWNLOAD_PATHS = {
     "movie": path.join(MEDIA_DOWNLOAD_PATH, "movies"),
     "show": path.join(MEDIA_DOWNLOAD_PATH, "shows"),
