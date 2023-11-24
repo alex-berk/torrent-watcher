@@ -1,11 +1,11 @@
 name: Deploy
 
 on:
-  pull_request:
+  workflow_run:
+    workflows: ["Tests"]
+    branches: [release]
     types:
-      - closed
-    branches:
-      - release
+      - completed
 
 jobs:
   deploy:
