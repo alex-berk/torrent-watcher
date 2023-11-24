@@ -30,6 +30,7 @@ class MonitorOrchestrator:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
     def update_monitor_settings_from_json(self) -> None:
+        # TODO: refactor, make sure file closed after use, remove "except json.decoder.JSONDecodeError"
         if not os.path.exists(self._monitor_settings_path):
             with open(self._monitor_settings_path, "w") as f:
                 f.write("[]")
