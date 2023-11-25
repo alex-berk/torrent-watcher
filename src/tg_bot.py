@@ -6,7 +6,8 @@ import prettytable as pt
 
 
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
+from telegram.ext import ContextTypes, filters, CommandHandler, \
+    MessageHandler, CallbackQueryHandler, ConversationHandler
 
 from pb_client import TorrentDetails
 from pb_orchestrator import PBSearcher, MonitorSetting, MonitorOrchestrator, JobResult
@@ -28,7 +29,8 @@ active_torrent: str or None
 class TgBotRunner:
     # TODO: consider, if torrent_searcher and torrent_client should be passed to class
     # maybe, use factory pattern
-    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher, monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
+    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher,
+                 monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
         self.torrent_searcher = torrent_searcher
