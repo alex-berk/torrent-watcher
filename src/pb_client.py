@@ -41,7 +41,8 @@ class PBSearcher:
     @classmethod
     def generate_magnet_link(cls, torrent_details: TorrentDetails) -> str:
         trackers_list_formatted = "&tr=".join([""] + cls._trackers_list)
-        link = f"magnet:?xt=urn:btih:{torrent_details.info_hash}&dn={torrent_details.name}{trackers_list_formatted}"
+        link = f"magnet:?xt=urn:btih:{torrent_details.info_hash}&dn=\
+            {torrent_details.name}{trackers_list_formatted}"
         return link
 
     def search_torrent(self, query: str = None) -> list[TorrentDetails]:
@@ -78,7 +79,8 @@ class PBSearcher:
 
 
 class PBMonitor(PBSearcher):
-    def __init__(self, show_name: str, season_number: int, episode_number: int, size_limit_gb: int = None, only_vips=False):
+    def __init__(self, show_name: str, season_number: int, episode_number: int,
+                 size_limit_gb: int = None, only_vips=False):
         self.type = "show"
         self.show_name = show_name
         self.season_number = season_number

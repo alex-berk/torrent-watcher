@@ -1,6 +1,5 @@
 from transmission_rpc import Client, Torrent, error as transmission_error
 from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH, TRANSMISSION_HOST
-from unittest.mock import patch, Mock
 from os import path
 from datetime import datetime
 

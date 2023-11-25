@@ -97,11 +97,11 @@ class TestPBSearcher:
 
     def test_look_no_results(self, mock_response_empty):
         results = self.searcher_empty_results.look()
-        assert results == None
+        assert results is None
 
     def test_look_http_timeout(self, mock_timeout):
         results = self.searcher.look()
-        assert results == None
+        assert results is None
 
 
 class TestPBMonitor:
@@ -121,7 +121,7 @@ class TestPBMonitor:
     def test_look_no_episodes(self, mock_response_empty):
         assert self.monitor.episode_number == 1
         result = self.monitor.look()
-        assert result == None
+        assert result is None
         assert self.monitor.episode_number == 1
 
     def test_look_max_seeders_with_size_limit(self, mock_response):
@@ -133,7 +133,7 @@ class TestPBMonitor:
         assert self.monitor.episode_number == 1
         self.monitor.size_limit_gb = 0.5
         result = self.monitor.look()
-        assert result == None
+        assert result is None
         assert self.monitor.episode_number == 1
 
     def test_look_http_error(self, mock_response_404):
