@@ -70,7 +70,6 @@ class PBSearcher:
         return search_results_formatted
 
     def look(self) -> TorrentDetails | None:
-        # TODO: test with empty results and with 404
         print(f"Monitor running: {self}")
         try:
             return self.search_torrent(self.default_query)[0]
@@ -97,7 +96,6 @@ class PBMonitor(PBSearcher):
         return " / ".join(items)
 
     def _generate_search_query(self) -> str:
-        # TODO: test edge cases in number of ep and seasons
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
 
     def _search_episode(self) -> list[TorrentDetails]:
@@ -105,7 +103,6 @@ class PBMonitor(PBSearcher):
         return self.search_torrent(search_query)
 
     def _find_new_episode(self) -> TorrentDetails | None:
-        # TODO: test with no, 1, and multiple new episodes
         available_downloads = self._search_episode()
         if not available_downloads:
             return
@@ -125,13 +122,3 @@ class PBMonitor(PBSearcher):
     def look(self) -> TorrentDetails | None:
         print(f"Monitor running: {self}")
         return self._find_new_episode()
-
-
-if __name__ == "__main__":
-    s = PBSearcher("akira")
-    results = s.look()
-    [print(result) for result in results[:10]]
-
-    w = PBMonitor("chainsaw man 1080p", 1, 5, 4)
-    new_ep = w.look()
-    print(new_ep)
