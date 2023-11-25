@@ -1,13 +1,13 @@
 import os
-from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
+from dataclasses import dataclass
 
 from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
     JobResult, Torrent, TransmissionClient, TorrentDetails
 
 import asyncio
 import prettytable as pt
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, CallbackQuery
 from telegram.ext import ContextTypes, filters, CommandHandler, \
     MessageHandler, CallbackQueryHandler, ConversationHandler
 
@@ -368,11 +368,10 @@ class TgBotRunner:
         self.item_chosen = self.get_search_result(item_hash)
         await self.verify_download_type(update, context, "search")
 
-    async def download_added(self, added_download, download_type, query):
+    async def download_added(self, added_download: Torrent, download_type: str, query: CallbackQuery):
         try:
-            download_name = added_download.name
-            download_path = self.torrent_client.download_paths[download_type] + \
-                "/" + download_name
+            download_name = added_download.name.strip()
+            download_path = f"{self.torrent_client.download_paths[download_type]}/{download_name}"
             await query.edit_message_text(text=f"Download job added\nPath: <b>{download_path}</b>",
                                           parse_mode="html")
         except AttributeError:
