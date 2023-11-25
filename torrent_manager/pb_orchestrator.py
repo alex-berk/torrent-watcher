@@ -1,5 +1,5 @@
 from typing import Generator
-from pb_client import PBSearcher, PBMonitor, TorrentDetails
+from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
 import os
 from dataclasses import dataclass
 import json

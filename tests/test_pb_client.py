@@ -1,5 +1,6 @@
 import pytest
-from src.pb_client import PBSearcher, PBMonitor, requests
+from torrent_manager import PBSearcher, PBMonitor
+from torrent_manager.pb_client import requests
 from dataclasses import dataclass
 import json
 

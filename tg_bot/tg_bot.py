@@ -1,18 +1,16 @@
 import os
-import asyncio
 from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
+
+from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
+    JobResult, Torrent, TransmissionClient, TorrentDetails
+
+import asyncio
 import prettytable as pt
-
-
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
 from telegram.ext import ContextTypes, filters, CommandHandler, \
     MessageHandler, CallbackQueryHandler, ConversationHandler
 
-from pb_client import TorrentDetails
-from pb_orchestrator import PBSearcher, MonitorSetting, MonitorOrchestrator, JobResult
-
-from transmission_client import Torrent, TransmissionClient
 
 MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 

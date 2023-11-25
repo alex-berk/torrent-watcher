@@ -3,9 +3,7 @@ from time import sleep
 from telegram.ext import ApplicationBuilder
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
 
-from transmission_client import TransmissionClient, transmission_error
-from pb_orchestrator import MonitorOrchestrator
-from pb_client import PBSearcher
+from torrent_manager import TransmissionClient, transmission_error, MonitorOrchestrator, PBSearcher
 from tg_bot import TgBotRunner
 
 
