@@ -7,7 +7,8 @@ from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
 
 import asyncio
 import prettytable as pt
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove, CallbackQuery
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, \
+    ReplyKeyboardMarkup, ReplyKeyboardRemove, CallbackQuery
 from telegram.ext import ContextTypes, filters, CommandHandler, \
     MessageHandler, CallbackQueryHandler, ConversationHandler
 

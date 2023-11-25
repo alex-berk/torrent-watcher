@@ -8,7 +8,7 @@ import json
 @dataclass
 class MonitorSetting:
     owner_id: int
-    searcher: PBSearcher or PBMonitor
+    searcher: PBSearcher | PBMonitor
     silent: bool = True
 
 
@@ -19,17 +19,16 @@ class JobResult:
 
 
 class MonitorOrchestrator:
-    # TODO: test if monitor settings are being updated after each new result
     def __init__(self, monitor_settings_path=None) -> None:
         self._monitor_settings_path = monitor_settings_path or \
             os.path.join(os.getcwd(), "data", "monitor_settings.json")
         self._settings: list[MonitorSetting] = []
-        self.update_monitor_settings_from_json()
+        self._update_monitor_settings_from_json()
 
     def get_user_monitors(self, uid: int) -> list[MonitorSetting]:
         return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
 
-    def update_monitor_settings_from_json(self) -> None:
+    def _update_monitor_settings_from_json(self) -> None:
         if not os.path.exists(self._monitor_settings_path):
             with open(self._monitor_settings_path, "w") as f:
                 f.write("[]")
@@ -38,9 +37,9 @@ class MonitorOrchestrator:
             settings = json.load(f)
             self._settings = list(map(self._dict_to_setting, settings))
 
+    # TODO: rename "is_serial" to "monitor_type", refactor into PBSearcher class
     @staticmethod
     def _dict_to_setting(setting: dict) -> MonitorSetting:
-        # TODO: rename "is_serial" to "monitor_type", refactor into settings_factory(setting.is_serial)
         if setting.get("is_serial", True):
             return MonitorSetting(
                 owner_id=setting["owner_id"],
@@ -96,13 +95,13 @@ class MonitorOrchestrator:
         self.add_monitor_job(settings)
 
     def get_jobs_by_owner_id(self, owner_id) -> Generator[MonitorSetting, None, None]:
-        self.update_monitor_settings_from_json()
+        self._update_monitor_settings_from_json()
         jobs_filtered = filter(lambda x: x.owner_id == owner_id,
                                self._settings)
         return jobs_filtered
 
     def run_search_job_iteration(self, owner_id) -> list[JobResult]:
-        self.update_monitor_settings_from_json()
+        self._update_monitor_settings_from_json()
         eligible_jobs = self.get_jobs_by_owner_id(
             owner_id) if owner_id else self._settings
         jobs = [JobResult(job.searcher.look(), job)

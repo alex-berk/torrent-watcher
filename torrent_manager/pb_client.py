@@ -87,21 +87,21 @@ class PBMonitor(PBSearcher):
         self.episode_number = episode_number
         self.size_limit_gb = size_limit_gb
         self.only_vips = only_vips
-
         self.whitelisted_statuses = (
             "vip",) if self.only_vips else ("vip", "trusted")
 
     def __repr__(self) -> str:
-        items = ["(S)", self._generate_search_query()]
+        items = ["(S)", self.default_query]
         if self.size_limit_gb:
             items += [f"<={self.size_limit_gb}Gb"]
         return " / ".join(items)
 
-    def _generate_search_query(self) -> str:
+    @property
+    def default_query(self) -> str:
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
 
     def _search_episode(self) -> list[TorrentDetails]:
-        search_query = self._generate_search_query()
+        search_query = self.default_query
         return self.search_torrent(search_query)
 
     def _find_new_episode(self) -> TorrentDetails | None:
