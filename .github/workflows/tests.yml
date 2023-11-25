@@ -6,6 +6,8 @@ jobs:
   test:
     name: Tests
     runs-on: ubuntu-latest
+    env:
+      MEDIA_DOWNLOAD_PATH: "/media"
     steps:
       - uses: actions/checkout@v4
       - name: Set up Python 3.11

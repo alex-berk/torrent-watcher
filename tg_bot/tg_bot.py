@@ -1,17 +1,17 @@
 import os
-import asyncio
-from dataclasses import dataclass
 from urllib.parse import unquote, parse_qs
+from dataclasses import dataclass
+
+from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
+    JobResult, Torrent, TransmissionClient, TorrentDetails
+
+import asyncio
 import prettytable as pt
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, \
+    ReplyKeyboardMarkup, ReplyKeyboardRemove, CallbackQuery
+from telegram.ext import ContextTypes, filters, CommandHandler, \
+    MessageHandler, CallbackQueryHandler, ConversationHandler
 
-
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, ReplyKeyboardRemove
-from telegram.ext import ContextTypes, filters, CommandHandler, MessageHandler, CallbackQueryHandler, ConversationHandler
-
-from pb_client import TorrentDetails
-from pb_orchestrator import PBSearcher, MonitorSetting, MonitorOrchestrator, JobResult
-
-from transmission_client import Torrent, TransmissionClient
 
 MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 
@@ -28,7 +28,8 @@ active_torrent: str or None
 class TgBotRunner:
     # TODO: consider, if torrent_searcher and torrent_client should be passed to class
     # maybe, use factory pattern
-    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher, monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
+    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher,
+                 monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
         self.torrent_searcher = torrent_searcher
@@ -368,11 +369,10 @@ class TgBotRunner:
         self.item_chosen = self.get_search_result(item_hash)
         await self.verify_download_type(update, context, "search")
 
-    async def download_added(self, added_download, download_type, query):
+    async def download_added(self, added_download: Torrent, download_type: str, query: CallbackQuery):
         try:
-            download_name = added_download.name
-            download_path = self.torrent_client.download_paths[download_type] + \
-                "/" + download_name
+            download_name = added_download.name.strip()
+            download_path = f"{self.torrent_client.download_paths[download_type]}/{download_name}"
             await query.edit_message_text(text=f"Download job added\nPath: <b>{download_path}</b>",
                                           parse_mode="html")
         except AttributeError:
