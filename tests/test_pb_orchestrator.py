@@ -6,26 +6,26 @@ jobs = [
     {
         "owner_id": 1111111,
         "silent": False,
-        "query": "the last of us",
-        "is_serial": True,
+        "name": "the last of us",
+        "monitor_type": "show",
         "season": 1,
-        "episode_number": 10,
+        "episode": 10,
         "size_limit": 0
     },
     {
         "owner_id": 1111111,
         "silent": True,
-        "query": "chainsaw man",
-        "is_serial": True,
+        "name": "chainsaw man",
+        "monitor_type": "show",
         "season": 2,
-        "episode_number": 1,
+        "episode": 1,
         "size_limit": 3
     },
     {
         "owner_id": 1111111,
         "silent": True,
-        "query": "the matrix",
-        "is_serial": False
+        "name": "the matrix",
+        "monitor_type": "movie"
     }
 ]
 
@@ -64,12 +64,12 @@ class TestMonitorOrchestrator:
     def test_save_settings(self, mock_response):
         saved_settings = read_settings_file()
         assert len(saved_settings) == 3
-        assert saved_settings[0]["episode_number"] == 10
+        assert saved_settings[0]["episode"] == 10
 
         self.orchestrator.run_search_job_iteration(self.owner_id)
         saved_settings = read_settings_file()
         assert len(saved_settings) == 2
-        assert saved_settings[0]["episode_number"] == 11
+        assert saved_settings[0]["episode"] == 11
 
     def test_add_job(self):
         self.orchestrator.add_monitor_job(MonitorSetting(self.owner_id, PBSearcher("New Job")))
@@ -77,7 +77,7 @@ class TestMonitorOrchestrator:
         assert len(monitor_list) == 4
         assert monitor_list[-1].searcher.default_query == "New Job"
         saved_settings = read_settings_file()
-        assert saved_settings[-1]["query"] == "New Job"
+        assert saved_settings[-1]["name"] == "New Job"
 
     def test_remove_job(self):
         monitor_list = self.orchestrator.get_user_monitors(self.owner_id)

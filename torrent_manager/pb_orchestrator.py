@@ -37,27 +37,28 @@ class MonitorOrchestrator:
             settings = json.load(f)
             self._settings = list(map(self._dict_to_setting, settings))
 
-    # TODO: rename "is_serial" to "monitor_type", refactor into PBSearcher class
     @staticmethod
     def _dict_to_setting(setting: dict) -> MonitorSetting:
-        if setting.get("is_serial", True):
-            return MonitorSetting(
-                owner_id=setting["owner_id"],
-                silent=setting.get("silent", True),
-                searcher=PBMonitor(
-                    show_name=setting["query"],
-                    season_number=setting["season"],
-                    episode_number=setting["episode_number"],
-                    size_limit_gb=setting["size_limit"],
+        match setting["monitor_type"]:
+            case "show":
+                return MonitorSetting(
+                    owner_id=setting["owner_id"],
+                    silent=setting.get("silent", True),
+                    searcher=PBMonitor(
+                        show_name=setting["name"],
+                        season_number=setting["season"],
+                        episode_number=setting["episode"],
+                        size_limit_gb=setting["size_limit"],
+                    )
                 )
-            )
-        return MonitorSetting(
-            owner_id=setting["owner_id"],
-            silent=setting.get("silent", True),
-            searcher=PBSearcher(
-                default_query=setting["query"]
-            )
-        )
+            case "movie":
+                return MonitorSetting(
+                    owner_id=setting["owner_id"],
+                    silent=setting.get("silent", True),
+                    searcher=PBSearcher(
+                        default_query=setting["name"]
+                    )
+                )
 
     @staticmethod
     def _setting_to_dict(setting: MonitorSetting) -> dict:
@@ -66,13 +67,13 @@ class MonitorOrchestrator:
             "silent": setting.silent,
         }
         if setting.searcher.type == "movie":
-            setting_obj["query"] = setting.searcher.default_query
-            setting_obj["is_serial"] = False
+            setting_obj["name"] = setting.searcher.default_query
+            setting_obj["monitor_type"] = "movie"
         else:
-            setting_obj["query"] = setting.searcher.show_name
-            setting_obj["is_serial"] = True
+            setting_obj["name"] = setting.searcher.show_name
+            setting_obj["monitor_type"] = "show"
             setting_obj["season"] = setting.searcher.season_number
-            setting_obj["episode_number"] = setting.searcher.episode_number
+            setting_obj["episode"] = setting.searcher.episode_number
             setting_obj["size_limit"] = setting.searcher.size_limit_gb
 
         return setting_obj

@@ -116,7 +116,7 @@ class PBMonitor(PBSearcher):
         try:
             new_episode = next(available_downloads)
             print(f"Monitor {self}: found new episode")
-            self.episode_number += 1  # TODO: consider moving to separate self.update() method
+            self.episode_number += 1
             return new_episode
         except StopIteration:
             return
