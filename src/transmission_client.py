@@ -1,14 +1,19 @@
 from transmission_rpc import Client, Torrent, error as transmission_error
-from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH, TRANSMISSION_HOST
+from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH
 from os import path
 from datetime import datetime
 
 
 class TransmissionClient(Client):
-    def __init__(self, host, download_paths: dict,) -> None:
+    def __init__(self, host: str) -> None:
         super().__init__(host=host)
-        self.download_paths = download_paths
 
+    download_paths = {
+        "movie": path.join(MEDIA_DOWNLOAD_PATH, "movies"),
+        "show": path.join(MEDIA_DOWNLOAD_PATH, "shows"),
+        "video": path.join(MEDIA_DOWNLOAD_PATH, "videos"),
+        "other": REGULAR_DOWNLOAD_PATH,
+    }
     _pending_statuses = ['downloading',
                          'download pending', 'check pending', 'checking',]
 
@@ -19,7 +24,7 @@ class TransmissionClient(Client):
         return torrent_age_days <= 3 or torrent.status in self._pending_statuses
 
     def add_download(self, magnet_link: str, download_type: str) -> Torrent | None:
-        download_dir = DOWNLOAD_PATHS[download_type]
+        download_dir = self.download_paths[download_type]
         try:
             download = self.add_torrent(magnet_link, download_dir=download_dir)
         except transmission_error.TransmissionError:
@@ -43,21 +48,3 @@ class TransmissionClient(Client):
         pending_torrents = filter(
             self._filter_fresh_torrents, torrents)
         return tuple(pending_torrents)
-
-
-# TODO: ?move inside the class, expose for easy export
-DOWNLOAD_PATHS = {
-    "movie": path.join(MEDIA_DOWNLOAD_PATH, "movies"),
-    "show": path.join(MEDIA_DOWNLOAD_PATH, "shows"),
-    "video": path.join(MEDIA_DOWNLOAD_PATH, "videos"),
-    "other": REGULAR_DOWNLOAD_PATH,
-}
-
-if __name__ == "__main__":
-    try:
-        c = TransmissionClient(TRANSMISSION_HOST, DOWNLOAD_PATHS)
-        torrents = c.get_recent_downloads()
-        for torrent in torrents:
-            print(torrent)
-    except transmission_error.TransmissionConnectError:
-        raise "can't connect to the host"

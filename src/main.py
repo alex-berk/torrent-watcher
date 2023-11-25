@@ -1,12 +1,11 @@
 from multiprocessing import Process
 from time import sleep
+from telegram.ext import ApplicationBuilder
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
 
-from transmission_client import TransmissionClient, DOWNLOAD_PATHS, transmission_error
+from transmission_client import TransmissionClient, transmission_error
 from pb_orchestrator import MonitorOrchestrator
 from pb_client import PBSearcher
-
-from telegram.ext import ApplicationBuilder
 from tg_bot import TgBotRunner
 
 
@@ -16,7 +15,7 @@ torrent_searcher = PBSearcher()
 monitors_orchestrator = MonitorOrchestrator()
 
 try:
-    transmission = TransmissionClient(TRANSMISSION_HOST, DOWNLOAD_PATHS)
+    transmission = TransmissionClient(TRANSMISSION_HOST)
 except transmission_error.TransmissionConnectError:
     raise "can't connect to the host"
 
