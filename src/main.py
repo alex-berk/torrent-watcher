@@ -24,8 +24,11 @@ users_whitelist = [int(uid) for uid in ALLOWED_TG_IDS.split(",")]
 admin_tgid = users_whitelist[0]
 tg_client = ApplicationBuilder().token(TG_BOT_TOKEN).build()
 
-runner = TgBotRunner(tg_client=tg_client, torrent_client=transmission,
-                     torrent_searcher=torrent_searcher, monitors_orchestrator=monitors_orchestrator, tg_user_whitelist=users_whitelist)
+runner = TgBotRunner(tg_client=tg_client,
+                     torrent_client=transmission,
+                     torrent_searcher=torrent_searcher,
+                     monitors_orchestrator=monitors_orchestrator,
+                     tg_user_whitelist=users_whitelist)
 
 
 def run_search_jobs_on_timer(timer_seconds):

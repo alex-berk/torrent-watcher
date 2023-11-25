@@ -137,15 +137,17 @@ class TgBotRunner:
             self._storage.saved_search_results[:-len(results)]
 
     @staticmethod
-    def get_param_value(val): return val[val.find("=") + 1:]
+    def get_param_value(val):
+        return val[val.find("=") + 1:]
 
     @staticmethod
-    def get_name_from_magnet(magnet): return parse_qs(
-        unquote(magnet))["dn"].pop()
+    def get_name_from_magnet(magnet):
+        return parse_qs(unquote(magnet))["dn"].pop()
 
     def send_message(self, chat_id, text, parse_mode="html"):
         asyncio.get_event_loop().run_until_complete(
-            self.tg_client.bot.send_message(chat_id=chat_id, text=text, parse_mode=parse_mode))
+            self.tg_client.bot.send_message(chat_id=chat_id,
+                                            text=text, parse_mode=parse_mode))
 
     def get_search_result(self, hash: str):
         try:
@@ -176,7 +178,8 @@ class TgBotRunner:
         self._storage.active_torrent = None
 
     @staticmethod
-    def generate_search_results_keyboard(results: list[TorrentDetails], search_query: str) -> list[list[InlineKeyboardButton]]:
+    def generate_search_results_keyboard(results: list[TorrentDetails], search_query: str)\
+            -> list[list[InlineKeyboardButton]]:
         outer_array = []
         for result in results:
             outer_array.append([InlineKeyboardButton(
@@ -206,30 +209,39 @@ class TgBotRunner:
         callback_id = "download_type"
         if callback_postfix:
             callback_id += f"_{callback_postfix}"
-        keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"), InlineKeyboardButton("Shows", callback_data=f"{callback_id}=show"), InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"),], [
-            InlineKeyboardButton("Other", callback_data=f"{callback_id}=other"), InlineKeyboardButton("⭕️ Cancel", callback_data="cancel")]]
+        keyboard = [[InlineKeyboardButton("Movies", callback_data=f"{callback_id}=movie"),
+                     InlineKeyboardButton(
+                         "Shows", callback_data=f"{callback_id}=show"),
+                     InlineKeyboardButton("Videos", callback_data=f"{callback_id}=video"),],
+                    [InlineKeyboardButton("Other", callback_data=f"{callback_id}=other"),
+                     InlineKeyboardButton("⭕️ Cancel", callback_data="cancel")]]
         reply_markup = InlineKeyboardMarkup(keyboard)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Where should it be downloaded?", reply_markup=reply_markup)
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="Where should it be downloaded?", reply_markup=reply_markup)
 
         # command handlers
     @staticmethod
     async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Heya!")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="Heya!")
 
     async def search_pb(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         search_query = ' '.join(context.args)
         if not search_query:
+            reply_text = "You need to use this command with search query, like <i>/search Game of thrones s03</i>"
             return await context.bot.send_message(chat_id=update.effective_chat.id,
-                                                  text="You need to use this command with search query, like <i>/search Game of thrones s03</i>", parse_mode="html")
+                                                  text=reply_text, parse_mode="html")
         search_results = self.torrent_searcher.search_torrent(search_query)[:5]
         if not search_results:
-            return await context.bot.send_message(chat_id=update.effective_chat.id, text="couldn't find anything")
+            return await context.bot.send_message(chat_id=update.effective_chat.id,
+                                                  text="couldn't find anything")
         self.saved_search_results = search_results
         text = "here's a top results i've found:"
         results_keyboard = self.generate_search_results_keyboard(
             search_results, search_query)
         reply_markup = InlineKeyboardMarkup(results_keyboard)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=text, reply_markup=reply_markup)
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=text, reply_markup=reply_markup)
 
     async def generate_torrent_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = update.message.text
@@ -251,7 +263,8 @@ class TgBotRunner:
         self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
         await context.bot.send_message(
-            chat_id=update.effective_chat.id, text="Added monitor job", reply_markup=ReplyKeyboardRemove())
+            chat_id=update.effective_chat.id,
+            text="Added monitor job", reply_markup=ReplyKeyboardRemove())
         # doesn't exit the context and goes into recursion
 
         self.download_new_finds(update.effective_chat.id)
@@ -259,7 +272,8 @@ class TgBotRunner:
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self.download_new_finds(update.effective_chat.id)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="ran all monitors")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="ran all monitors")
 
     async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         search_query = ' '.join(context.args)
@@ -270,7 +284,9 @@ class TgBotRunner:
             context.user_data["search_query"] = search_query
             return await self.generate_torrent_monitor(update, context)
         keyboard = [["Movie", "Show"]]
-        await update.message.reply_text("What are we looking for? (Movie/Show)", reply_markup=ReplyKeyboardMarkup(keyboard, one_time_keyboard=True))
+        await update.message.reply_text("What are we looking for? (Movie/Show)",
+                                        reply_markup=ReplyKeyboardMarkup(keyboard,
+                                                                         one_time_keyboard=True))
 
         return MONITOR_TYPE
 
@@ -278,7 +294,8 @@ class TgBotRunner:
         # TODO: check for handling invalid input
         content_type = update.message.text.lower()
         context.user_data["monitor_type"] = content_type
-        await update.message.reply_text(f"What's the name of the {content_type}?", reply_markup=ReplyKeyboardRemove())
+        await update.message.reply_text(f"What's the name of the {content_type}?",
+                                        reply_markup=ReplyKeyboardRemove())
 
         return SEARCH_QUERY
 
@@ -287,7 +304,8 @@ class TgBotRunner:
         context.user_data["search_query"] = text
         keyboard = ReplyKeyboardMarkup([[
             "Yes", "No"]], one_time_keyboard=True)
-        await update.message.reply_text("Should i notify you when i find it?", reply_markup=keyboard)
+        await update.message.reply_text("Should i notify you when i find it?",
+                                        reply_markup=keyboard)
 
         return SILENT
 
@@ -305,7 +323,10 @@ class TgBotRunner:
             season, episode = update.message.text.split("-")
             context.user_data["season"] = int(season)
             context.user_data["episode_number"] = int(episode)
-            await update.message.reply_text("Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit", reply_markup=ReplyKeyboardMarkup([["No"]], one_time_keyboard=True))
+            msg_text = "Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit"
+            await update.message.reply_text(msg_text,
+                                            reply_markup=ReplyKeyboardMarkup([["No"]],
+                                                                             one_time_keyboard=True))
             return SIZE_LIMIT
         except ValueError:
             await update.message.reply_text(
@@ -319,13 +340,22 @@ class TgBotRunner:
     async def view_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_monitors: MonitorSetting = self.monitors_orchestrator.get_user_monitors(
             update.effective_chat.id)
-        keyboard = [[InlineKeyboardButton(str(user_monitor.searcher), callback_data=f"monitor_full_name={index}"), InlineKeyboardButton("🗑️", callback_data=f"monitor_delete={index}")]
+        keyboard = [[InlineKeyboardButton(str(user_monitor.searcher),
+                                          callback_data=f"monitor_full_name={index}"),
+                     InlineKeyboardButton("🗑️",
+                                          callback_data=f"monitor_delete={index}")]
                     for index, user_monitor in enumerate(user_monitors)]
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'Here are your active monitors:', reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="html")
+
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text='Here are your active monitors:',
+                                       reply_markup=InlineKeyboardMarkup(
+                                           keyboard),
+                                       parse_mode="html")
 
     @ staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Sorry, I didn't understand that command.")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="Sorry, I didn't understand that command.")
 
         # callback handlers
     async def callback_full_name(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -338,6 +368,18 @@ class TgBotRunner:
         self.item_chosen = self.get_search_result(item_hash)
         await self.verify_download_type(update, context, "search")
 
+    async def download_added(self, added_download, download_type, query):
+        try:
+            download_name = added_download.name
+            download_path = self.torrent_client.download_paths[download_type] + \
+                "/" + download_name
+            await query.edit_message_text(text=f"Download job added\nPath: <b>{download_path}</b>",
+                                          parse_mode="html")
+        except AttributeError:
+            await query.edit_message_text(text="Error getting name of the download")
+        finally:
+            await query.answer()
+
     async def callback_download_type(self, update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
         query = update.callback_query
         download_type = self.get_param_value(query.data)
@@ -346,36 +388,18 @@ class TgBotRunner:
                 self.item_chosen)
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            try:
-                download_name = added_download.name
-                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
-            except AttributeError:
-                await query.edit_message_text(text=f"Error getting name of the download")
-            finally:
-                await query.answer()
+            await self.download_added(added_download, download_type, query)
 
         elif query.data.startswith("download_type_maglink"):
             magnet_link = self.active_torrent
             added_download = self.torrent_client.add_download(
                 magnet_link, download_type)
-            try:
-                download_name = added_download.name
-                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
-            except AttributeError:
-                await query.edit_message_text(text=f"Error getting name of the download")
-            finally:
-                await query.answer()
+            await self.download_added(added_download, download_type, query)
 
         elif query.data.startswith("download_type_file"):
             added_download = self.torrent_client.download_from_file(
                 self.active_torrent, download_type)
-            try:
-                download_name = added_download.name
-                await query.edit_message_text(text=f"Download job added\nPath: <b>{self.torrent_client.download_paths[download_type]}/{download_name}</b>", parse_mode="html")
-            except AttributeError:
-                await query.edit_message_text(text=f"Error getting name of the download")
-            finally:
-                await query.answer()
+            await self.download_added(added_download, download_type, query)
 
         self.clear_storage()
 
@@ -392,13 +416,16 @@ class TgBotRunner:
     async def get_recent_downloads(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         pending_downloads = self.torrent_client.get_recent_downloads()
         if not pending_downloads:
-            return await context.bot.send_message(chat_id=update.effective_chat.id, text="no pending downloads at the moment")
+            return await context.bot.send_message(chat_id=update.effective_chat.id,
+                                                  text="no pending downloads at the moment")
         output_table = self.generate_progress_table(pending_downloads)
-        await context.bot.send_message(chat_id=update.effective_chat.id, text=f'<pre>{output_table}</pre>', parse_mode="html")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text=f'<pre>{output_table}</pre>', parse_mode="html")
 
     async def cancel(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         self.clear_storage()
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="Canceled", reply_markup=ReplyKeyboardRemove())
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="Canceled", reply_markup=ReplyKeyboardRemove())
 
         # text / file handlers
     async def accept_magnet_link(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -415,8 +442,10 @@ class TgBotRunner:
 
     @staticmethod
     async def unknown_file(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="that doesn't look like a file i can work with")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="that doesn't look like a file i can work with")
 
     @staticmethod
     async def auth_failed(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        await context.bot.send_message(chat_id=update.effective_chat.id, text="do i know you?")
+        await context.bot.send_message(chat_id=update.effective_chat.id,
+                                       text="do i know you?")
