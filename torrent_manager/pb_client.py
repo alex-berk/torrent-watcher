@@ -1,6 +1,7 @@
 import requests
 import json
 from dataclasses import dataclass
+from uuid import uuid4
 
 
 @dataclass
@@ -31,11 +32,15 @@ class PBSearcher:
         "udp://open.stealth.si:80/announce",
     ]
 
-    def __init__(self, default_query=None) -> None:
+    def __init__(self, default_query: str = None, uuid: str = None) -> None:
         self.default_query = default_query
-        self.type = "movie"
+        self.monitor_type = "movie"
+        self.uuid = uuid or str(uuid4())
 
-    def __repr__(self) -> str:
+    def __repr__(self):
+        return f"PBSearcher(default_query={self.default_query}, uuid={self.uuid})"
+
+    def __str__(self) -> str:
         return f"(M) / {self.default_query}"
 
     @classmethod
@@ -80,8 +85,8 @@ class PBSearcher:
 
 class PBMonitor(PBSearcher):
     def __init__(self, show_name: str, season_number: int, episode_number: int,
-                 size_limit_gb: int = None, only_vips=False):
-        self.type = "show"
+                 uuid: str = None, size_limit_gb: int = None, only_vips=False):
+        self.monitor_type = "show"
         self.show_name = show_name
         self.season_number = season_number
         self.episode_number = episode_number
@@ -89,8 +94,25 @@ class PBMonitor(PBSearcher):
         self.only_vips = only_vips
         self.whitelisted_statuses = (
             "vip",) if self.only_vips else ("vip", "trusted")
+        self.uuid = uuid or str(uuid4())
 
-    def __repr__(self) -> str:
+    def __repr__(self):
+        fields = {
+            "show_name": self.show_name,
+            "season_number": self.season_number,
+            "episode_number": self.episode_number,
+            "uuid": self.uuid
+        }
+        for optional_field_key, optional_field_val in (("size_limit_gb", self.size_limit_gb),
+                                                       ("only_vips", self.only_vips),
+                                                       ("whitelisted_statuses", self.whitelisted_statuses)):
+            if optional_field_val:
+                fields[optional_field_key] = optional_field_val
+
+        fields_str = ", ".join((f"{key}={val}" for key, val in fields.items()))
+        return f"PBMonitor({fields_str})"
+
+    def __str__(self) -> str:
         items = ["(S)", self.default_query]
         if self.size_limit_gb:
             items += [f"<={self.size_limit_gb}Gb"]

@@ -47,4 +47,4 @@ class TransmissionClient(Client):
         torrents = self.get_torrents()
         pending_torrents = filter(
             self._filter_fresh_torrents, torrents)
-        return tuple(pending_torrents)
+        return sorted(pending_torrents, key=lambda t: t.added_date, reverse=True)
