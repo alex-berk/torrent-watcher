@@ -1,4 +1,4 @@
-from typing import Generator
+from typing import Generator, Iterable
 from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
 import os
 from dataclasses import dataclass
@@ -26,7 +26,7 @@ class MonitorOrchestrator:
         self._update_monitor_settings_from_json()
 
     def get_user_monitors(self, uid: int) -> list[MonitorSetting]:
-        return list(filter(lambda x: str(x.owner_id) == str(uid), self._settings))
+        return [monitor for monitor in self._settings if str(monitor.owner_id) == str(uid)]
 
     def _update_monitor_settings_from_json(self) -> None:
         if not os.path.exists(self._monitor_settings_path):
@@ -35,7 +35,7 @@ class MonitorOrchestrator:
 
         with open(self._monitor_settings_path, "r") as f:
             settings = json.load(f)
-            self._settings = list(map(self._dict_to_setting, settings))
+            self._settings = [self._dict_to_setting(setting) for setting in settings]
 
     @staticmethod
     def _dict_to_setting(setting: dict) -> MonitorSetting:
@@ -110,23 +110,24 @@ class MonitorOrchestrator:
                                self._settings)
         return jobs_filtered
 
-    def run_search_job_iteration(self, owner_id) -> list[JobResult]:
-        self._update_monitor_settings_from_json()
-        eligible_jobs = self.get_jobs_by_owner_id(
-            owner_id) if owner_id else self._settings
+    def run_search_job_iteration(self, owner_id, jobs_to_run: Iterable[MonitorSetting] = None) \
+            -> Generator[JobResult, None, None]:
+        eligible_jobs = jobs_to_run or self.get_jobs_by_owner_id(owner_id)
         jobs = [JobResult(job.searcher.look(), job)
                 for job in eligible_jobs]
-        jobs_with_results = list(filter(lambda j: j.result, jobs))
-        done_jobs = filter(lambda j: j.job_settings.searcher.monitor_type == "movie",
-                           jobs_with_results)
+        jobs_with_results = (j for j in jobs if j.result)
+        done_jobs = (j for j in jobs
+                     if j.job_settings.searcher.monitor_type == "movie")
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
         self._save_settings()
         return jobs_with_results
 
-    def run_search_jobs(self, owner_id=None) -> list[JobResult]:
+    def run_search_jobs(self, owner_id: str = None) -> list[JobResult]:
         jobs_with_results_all: list[JobResult] = []
         iteration_result = self.run_search_job_iteration(owner_id)
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
-            iteration_result = self.run_search_job_iteration(owner_id)
+            jobs_for_next_iteration = (job for job in iteration_result
+                                       if job.job_settings.searcher.type == "show")
+            iteration_result = self.run_search_job_iteration(owner_id, jobs_for_next_iteration)
         return jobs_with_results_all
