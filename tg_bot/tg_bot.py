@@ -170,7 +170,6 @@ class TgBotRunner:
                 found_item.result)
             download_type = found_item.job_settings.searcher.monitor_type
             self.torrent_client.add_download(magnet_link, download_type)
-        return search_results
 
     def clear_storage(self):
         self._storage.item_chosen = None

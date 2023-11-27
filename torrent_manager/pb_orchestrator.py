@@ -111,11 +111,11 @@ class MonitorOrchestrator:
         return jobs_filtered
 
     def run_search_job_iteration(self, owner_id, jobs_to_run: Iterable[MonitorSetting] = None) \
-            -> Generator[JobResult, None, None]:
+            -> list[JobResult]:
         eligible_jobs = jobs_to_run or self.get_jobs_by_owner_id(owner_id)
         jobs = [JobResult(job.searcher.look(), job)
                 for job in eligible_jobs]
-        jobs_with_results = (j for j in jobs if j.result)
+        jobs_with_results = [j for j in jobs if j.result]
         done_jobs = (j for j in jobs
                      if j.job_settings.searcher.monitor_type == "movie")
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
@@ -127,7 +127,7 @@ class MonitorOrchestrator:
         iteration_result = self.run_search_job_iteration(owner_id)
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
-            jobs_for_next_iteration = (job for job in iteration_result
-                                       if job.job_settings.searcher.type == "show")
+            jobs_for_next_iteration = (job.job_settings for job in iteration_result
+                                       if job.job_settings.searcher.monitor_type == "show")
             iteration_result = self.run_search_job_iteration(owner_id, jobs_for_next_iteration)
         return jobs_with_results_all

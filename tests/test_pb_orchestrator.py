@@ -61,6 +61,15 @@ class TestMonitorOrchestrator:
         assert torrent_names == ["Torrent 3", "Torrent 1", "Torrent 3"]
         assert len(jobs_results_list) == 3
 
+    def test_run_search_jobs(self, mock_response_iteration):
+        jobs_results = self.orchestrator.run_search_jobs(self.owner_id)
+        jobs_results_list = list(jobs_results)
+
+        assert len(jobs_results_list) == 5
+        expected_queries = ['the last of us s01e10', 'chainsaw man s02e01', 'the matrix',
+                            'the last of us s01e11', 'chainsaw man s02e02', 'the last of us s01e12', 'chainsaw man s02e03']
+        assert mock_response_iteration["queries"] == expected_queries
+
     def test_search_results_empty(self, mock_response_empty):
         loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
         assert len(loaded_monitors) == 3

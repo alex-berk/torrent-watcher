@@ -18,7 +18,7 @@ except transmission_error.TransmissionConnectError:
     raise "can't connect to the host"
 
 users_whitelist = [int(uid) for uid in ALLOWED_TG_IDS.split(",")]
-admin_tgid = users_whitelist[0]
+admin_tg_id = users_whitelist[0]
 tg_client = ApplicationBuilder().token(TG_BOT_TOKEN).build()
 
 runner = TgBotRunner(tg_client=tg_client,
@@ -29,8 +29,8 @@ runner = TgBotRunner(tg_client=tg_client,
 
 
 def run_search_jobs_on_timer(timer_seconds):
-    search_results = runner.download_new_finds(admin_tgid)
-    sleep(5 if search_results else timer_seconds)
+    runner.download_new_finds(admin_tg_id)
+    sleep(timer_seconds)
     run_search_jobs_on_timer(timer_seconds)
 
 
