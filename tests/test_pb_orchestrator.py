@@ -67,7 +67,8 @@ class TestMonitorOrchestrator:
 
         assert len(jobs_results_list) == 5
         expected_queries = ['the last of us s01e10', 'chainsaw man s02e01', 'the matrix',
-                            'the last of us s01e11', 'chainsaw man s02e02', 'the last of us s01e12', 'chainsaw man s02e03']
+                            'the last of us s01e11', 'chainsaw man s02e02', 'the last of us s01e12',
+                            'chainsaw man s02e03']
         assert mock_response_iteration["queries"] == expected_queries
 
     def test_search_results_empty(self, mock_response_empty):

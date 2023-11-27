@@ -3,7 +3,7 @@ from urllib.parse import unquote, parse_qs
 from dataclasses import dataclass
 
 from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
-    JobResult, Torrent, TransmissionClient, TorrentDetails
+    Torrent, TransmissionClient, TorrentDetails
 
 import asyncio
 import prettytable as pt
