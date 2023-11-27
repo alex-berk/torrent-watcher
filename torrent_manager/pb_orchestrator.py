@@ -110,8 +110,8 @@ class MonitorOrchestrator:
 
     def get_jobs_by_owner_id(self, owner_id) -> Generator[MonitorSetting, None, None]:
         self._update_monitor_settings_from_json()
-        jobs_filtered = filter(lambda x: x.owner_id == owner_id,
-                               self._settings)
+        jobs_filtered = (s for s in self._settings
+                         if s.owner_id == owner_id)
         return jobs_filtered
 
     def run_search_job_iteration(self, owner_id, jobs_to_run: Iterable[MonitorSetting] = None) \
