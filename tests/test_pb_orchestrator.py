@@ -10,7 +10,8 @@ jobs = [
         "monitor_type": "show",
         "season": 1,
         "episode": 10,
-        "size_limit": 0
+        "size_limit": 0,
+        "uuid": "AA45815E-3E20-4132-BCE6-331F6C9C42D3"
     },
     {
         "owner_id": 1111111,
@@ -19,13 +20,15 @@ jobs = [
         "monitor_type": "show",
         "season": 2,
         "episode": 1,
-        "size_limit": 3
+        "size_limit": 3,
+        "uuid": "8C7C1197-1EB3-451F-B4F5-CC906560387E"
     },
     {
         "owner_id": 1111111,
         "silent": True,
         "name": "the matrix",
-        "monitor_type": "movie"
+        "monitor_type": "movie",
+        "uuid": "D995C8CC-4B2F-4598-B024-7321F4C3A8EF"
     }
 ]
 
