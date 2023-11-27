@@ -17,6 +17,10 @@ class JobResult:
     result: TorrentDetails
     job_settings: MonitorSetting
 
+    @property
+    def magnet_link(self) -> str:
+        return self.job_settings.searcher.generate_magnet_link(self.result)
+
 
 class MonitorOrchestrator:
     def __init__(self, monitor_settings_path=None) -> None:

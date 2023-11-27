@@ -162,14 +162,10 @@ class TgBotRunner:
         active_monitor = self.monitors_orchestrator.get_monitor_by_uuid(monitor_uuid)
         return active_monitor
 
-    def download_new_finds(self, job_owner_id: int) -> list[JobResult]:
-        search_results = self.monitors_orchestrator.run_search_jobs(
-            job_owner_id)
-        for found_item in search_results:
-            magnet_link = self.torrent_searcher.generate_magnet_link(
-                found_item.result)
+    def download_new_finds(self, job_owner_id: int) -> None:
+        for found_item in self.monitors_orchestrator.run_search_jobs(job_owner_id):
             download_type = found_item.job_settings.searcher.monitor_type
-            self.torrent_client.add_download(magnet_link, download_type)
+            self.torrent_client.add_download(found_item.magnet_link, download_type)
 
     def clear_storage(self):
         self._storage.item_chosen = None
