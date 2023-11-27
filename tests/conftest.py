@@ -1,4 +1,5 @@
 import pytest
+from typing import Callable
 from torrent_manager.pb_client import requests
 from dataclasses import dataclass
 import json
@@ -24,10 +25,10 @@ with open("tests/fixtures/pb_response.json", "r") as file:
     pb_response = PBResponse(data)
 
 
-def generate_mock_get(response_type: str = "") -> (callable, dict):
+def generate_mock_get(response_type: str = "") -> tuple[Callable[[str, any], PBResponse], dict]:
     buffer = {"url": "", "query": "", "calls": 0}
 
-    def mock_get(url, **kwargs):
+    def mock_get(url: str, **kwargs) -> PBResponse:
         query = kwargs.get("params").get("q")
         buffer["url"] = url
         buffer["query"] = query
