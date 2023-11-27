@@ -1,4 +1,5 @@
 import pytest
+from typing import Callable
 from torrent_manager.pb_client import requests
 from dataclasses import dataclass
 import json
@@ -24,20 +25,26 @@ with open("tests/fixtures/pb_response.json", "r") as file:
     pb_response = PBResponse(data)
 
 
-def generate_mock_get(response_type: str = "") -> (callable, dict):
-    buffer = {"url": "", "query": "", "calls": 0}
+def generate_mock_get(response_type: str = "") -> tuple[Callable[[str, any], PBResponse], dict]:
+    buffer = {"urls": [], "queries": [], "calls": 0}
 
-    def mock_get(url, **kwargs):
+    def mock_get(url: str, **kwargs) -> PBResponse:
         query = kwargs.get("params").get("q")
-        buffer["url"] = url
-        buffer["query"] = query
+        buffer["urls"].append(url)
+        buffer["queries"].append(query)
         buffer["calls"] += 1
 
-        if response_type == "empty":
-            return pb_response_no_results
-        elif response_type == "404":
-            return PBResponse(status_code=404)
-        return pb_response
+        match response_type:
+            case "empty":
+                return pb_response_no_results
+            case "404":
+                return PBResponse(status_code=404)
+            case "iteration":
+                if buffer["calls"] > 5:
+                    return pb_response_no_results
+                return pb_response
+            case _:
+                return pb_response
 
     return mock_get, buffer
 
@@ -45,6 +52,13 @@ def generate_mock_get(response_type: str = "") -> (callable, dict):
 @pytest.fixture
 def mock_response(monkeypatch: pytest.MonkeyPatch):
     mock_get, buffer = generate_mock_get()
+    monkeypatch.setattr(requests, "get", mock_get)
+    return buffer
+
+
+@pytest.fixture
+def mock_response_iteration(monkeypatch: pytest.MonkeyPatch):
+    mock_get, buffer = generate_mock_get("iteration")
     monkeypatch.setattr(requests, "get", mock_get)
     return buffer
 

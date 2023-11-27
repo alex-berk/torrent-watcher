@@ -10,7 +10,8 @@ jobs = [
         "monitor_type": "show",
         "season": 1,
         "episode": 10,
-        "size_limit": 0
+        "size_limit": 0,
+        "uuid": "AA45815E-3E20-4132-BCE6-331F6C9C42D3"
     },
     {
         "owner_id": 1111111,
@@ -19,13 +20,15 @@ jobs = [
         "monitor_type": "show",
         "season": 2,
         "episode": 1,
-        "size_limit": 3
+        "size_limit": 3,
+        "uuid": "8C7C1197-1EB3-451F-B4F5-CC906560387E"
     },
     {
         "owner_id": 1111111,
         "silent": True,
         "name": "the matrix",
-        "monitor_type": "movie"
+        "monitor_type": "movie",
+        "uuid": "D995C8CC-4B2F-4598-B024-7321F4C3A8EF"
     }
 ]
 
@@ -50,6 +53,39 @@ class TestMonitorOrchestrator:
         assert len(loaded_monitors) == 3
         assert loaded_monitors[0].searcher.default_query == "the last of us s01e10"
         assert loaded_monitors[-1].searcher.default_query == "the matrix"
+
+    def test_search_results(self, mock_response):
+        jobs_results = self.orchestrator.run_search_job_iteration(self.owner_id)
+        jobs_results_list = list(jobs_results)
+        torrent_names = [job.result.name for job in jobs_results_list]
+        assert torrent_names == ["Torrent 3", "Torrent 1", "Torrent 3"]
+        assert len(jobs_results_list) == 3
+
+    def test_run_search_jobs(self, mock_response_iteration):
+        jobs_results = self.orchestrator.run_search_jobs(self.owner_id)
+        jobs_results_list = list(jobs_results)
+
+        assert len(jobs_results_list) == 5
+        expected_queries = ['the last of us s01e10', 'chainsaw man s02e01', 'the matrix',
+                            'the last of us s01e11', 'chainsaw man s02e02', 'the last of us s01e12',
+                            'chainsaw man s02e03']
+        assert mock_response_iteration["queries"] == expected_queries
+
+    def test_search_results_empty(self, mock_response_empty):
+        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
+        assert len(loaded_monitors) == 3
+        assert loaded_monitors[0].searcher.episode_number == 10
+
+        jobs_results = self.orchestrator.run_search_job_iteration(self.owner_id)
+        jobs_results_list = list(jobs_results)
+        assert len(jobs_results_list) == 0
+        assert len(loaded_monitors) == 3  # without search results JobSetting didn't change
+        assert loaded_monitors[0].searcher.episode_number == 10
+
+    def test_search_results_error(self, mock_response_404):
+        jobs_results = self.orchestrator.run_search_job_iteration(self.owner_id)
+        jobs_results_list = list(jobs_results)
+        assert len(jobs_results_list) == 0
 
     def test_episode_update(self, mock_response):
         loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)

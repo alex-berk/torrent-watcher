@@ -3,7 +3,7 @@ from urllib.parse import unquote, parse_qs
 from dataclasses import dataclass
 
 from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
-    JobResult, Torrent, TransmissionClient, TorrentDetails
+    Torrent, TransmissionClient, TorrentDetails
 
 import asyncio
 import prettytable as pt
@@ -61,7 +61,7 @@ class TgBotRunner:
             entry_points=[CommandHandler(
                 "add_monitor", self.add_monitor), CommandHandler("am", self.add_monitor)],
             states={
-                MONITOR_TYPE: [MessageHandler(filters.Regex("^Movie|Show$"), self.set_monitor_search_query)],
+                MONITOR_TYPE: [MessageHandler(filters.Regex("^[Mm]ovie|[Ss]how$"), self.set_monitor_search_query)],
                 SEARCH_QUERY: [MessageHandler(filters.TEXT, self.set_monitor_silent)],
                 SILENT: [MessageHandler(filters.TEXT, self.get_season_and_episode)],
                 SEASON_AND_EPISODE: [MessageHandler(filters.TEXT, self.set_size_limit)],
@@ -158,21 +158,14 @@ class TgBotRunner:
 
     def get_active_monitor(self, update: Update) -> MonitorSetting:
         query = update.callback_query
-        monitor_index = self.get_param_value(query.data)
-        user_monitors = self.monitors_orchestrator.get_user_monitors(
-            update.effective_chat.id)
-        active_monitor = user_monitors[int(monitor_index)]
+        monitor_uuid = self.get_param_value(query.data)
+        active_monitor = self.monitors_orchestrator.get_monitor_by_uuid(monitor_uuid)
         return active_monitor
 
-    def download_new_finds(self, job_owner_id: int) -> list[JobResult]:
-        search_results = self.monitors_orchestrator.run_search_jobs(
-            job_owner_id)
-        for found_item in search_results:
-            magnet_link = self.torrent_searcher.generate_magnet_link(
-                found_item.result)
-            download_type = found_item.job_settings.searcher.type
-            self.torrent_client.add_download(magnet_link, download_type)
-        return search_results
+    def download_new_finds(self, job_owner_id: int) -> None:
+        for found_item in self.monitors_orchestrator.run_search_jobs(job_owner_id):
+            download_type = found_item.job_settings.searcher.monitor_type
+            self.torrent_client.add_download(found_item.magnet_link, download_type)
 
     def clear_storage(self):
         self._storage.item_chosen = None
@@ -251,14 +244,14 @@ class TgBotRunner:
         except ValueError:
             pass
         orchestrator_params = {
-            "is_serial": context.user_data["monitor_type"] == "show",
+            "monitor_type": context.user_data["monitor_type"],
             "silent": context.user_data["notify"] == "no",
-            "query": context.user_data["search_query"],
+            "name": context.user_data["search_query"],
             "owner_id": update.effective_chat.id
         }
-        if orchestrator_params["is_serial"]:
+        if context.user_data["monitor_type"] == "show":
             orchestrator_params["season"] = context.user_data["season"]
-            orchestrator_params["episode_number"] = context.user_data["episode_number"]
+            orchestrator_params["episode"] = context.user_data["episode"]
             orchestrator_params["size_limit"] = context.user_data.get(
                 "size_limit", 0)
         self.monitors_orchestrator.add_monitor_job_from_dict(
@@ -279,7 +272,6 @@ class TgBotRunner:
     async def add_monitor(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         search_query = ' '.join(context.args)
         if search_query:
-            # todo: also check if should be silent
             context.user_data["notify"] = "yes"
             context.user_data["monitor_type"] = "movie"
             context.user_data["search_query"] = search_query
@@ -323,7 +315,7 @@ class TgBotRunner:
         try:
             season, episode = update.message.text.split("-")
             context.user_data["season"] = int(season)
-            context.user_data["episode_number"] = int(episode)
+            context.user_data["episode"] = int(episode)
             msg_text = "Is there a size limit for each episode (in Gb)? Answer 'No' for no size limit"
             await update.message.reply_text(msg_text,
                                             reply_markup=ReplyKeyboardMarkup([["No"]],
@@ -335,17 +327,19 @@ class TgBotRunner:
             await self.get_season_and_episode(update, context)
 
     async def cancel_conversation(update: Update, context: ContextTypes.DEFAULT_TYPE) -> int:
+        context.user_data.clear()
         await update.message.reply_text("Canceled", reply_markup=ReplyKeyboardRemove())
         return ConversationHandler.END
 
     async def view_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_monitors: MonitorSetting = self.monitors_orchestrator.get_user_monitors(
+        # TODO: add monitor_id field and send it instead of monitor index
+        user_monitors: list[MonitorSetting] = self.monitors_orchestrator.get_user_monitors(
             update.effective_chat.id)
         keyboard = [[InlineKeyboardButton(str(user_monitor.searcher),
-                                          callback_data=f"monitor_full_name={index}"),
+                                          callback_data=f"monitor_full_name={user_monitor.searcher.uuid}"),
                      InlineKeyboardButton("🗑️",
-                                          callback_data=f"monitor_delete={index}")]
-                    for index, user_monitor in enumerate(user_monitors)]
+                                          callback_data=f"monitor_delete={user_monitor.searcher.uuid}")]
+                    for user_monitor in user_monitors]
 
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text='Here are your active monitors:',
