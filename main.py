@@ -8,13 +8,11 @@ from tg_bot import TgBotRunner
 
 
 PERIOD_SECONDS = 60 * 60 * 8
+users_whitelist = [int(uid) for uid in ALLOWED_TG_IDS.split(",")]
+admin_tg_id = users_whitelist[0]
 
 torrent_searcher = PBSearcher()
 monitors_orchestrator = MonitorOrchestrator()
-
-
-users_whitelist = [int(uid) for uid in ALLOWED_TG_IDS.split(",")]
-admin_tg_id = users_whitelist[0]
 transmission = TransmissionClient(TRANSMISSION_HOST)
 
 runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(),
