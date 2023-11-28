@@ -80,4 +80,4 @@ class TestPBMonitor:
         self.monitor.look()
         assert mock_response["queries"][0] == "attack on titan s00e00"
         self.monitor.look()
-        assert mock_response["queries"][1] != "attack on titan s00e01"
+        assert mock_response["queries"][1] == "attack on titan s00e01"

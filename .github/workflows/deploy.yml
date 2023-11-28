@@ -1,16 +1,18 @@
 name: Deploy
 
 on:
-  pull_request:
-    types:
-      - closed
+  push:
     branches:
       - main
 
 jobs:
+  tests:
+    name: Tests
+    uses: ./.github/workflows/tests.yml
+
   deploy:
     name: Deploy
-    if: github.event.pull_request.merged == true
+    needs: tests
     runs-on: ubuntu-latest
     steps:
       - name: "Post deploy request"
