@@ -24,7 +24,6 @@ class Storage:
 item_chosen: str or None
 active_torrent: str or None
 
-#comment
 
 class TgBotRunner:
     # TODO: consider, if torrent_searcher and torrent_client should be passed to class
