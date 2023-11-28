@@ -1,4 +1,4 @@
-name: Testing and Linting
+name: PR
 
 on:
   pull_request:
