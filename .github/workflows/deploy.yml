@@ -10,7 +10,7 @@ on:
 jobs:
   tests:
     name: Tests
-    uses: ./.github/workflows/tests.yml
+    uses: ./.github/workflows/pr.yml
 
   deploy:
     if: ${{github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy')}}
@@ -18,5 +18,5 @@ jobs:
     needs: tests
     runs-on: ubuntu-latest
     steps:
-      - name: "Post deploy request"
+      - name: "Deploy request"
         run: curl --fail-with-body --silent ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
