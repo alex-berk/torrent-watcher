@@ -2,7 +2,6 @@ name: PR
 
 on:
   pull_request:
-  workflow_call:
 
 jobs:
   add-label:
@@ -24,36 +23,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  test:
+  tests:
     name: Tests
-    runs-on: ubuntu-latest
-    env:
-      MEDIA_DOWNLOAD_PATH: "/media"
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install Dev Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-      - name: Run tests
-        run: pytest
-
-  lint:
-    name: Lint
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
-        with:
-          python-version: "3.11"
-      - name: Install Dev Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
-      - name: Run lint
-        run: flake8
+    uses: ./.github/workflows/tests.yml
