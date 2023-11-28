@@ -1,10 +1,29 @@
-name: Testing and Linting
+name: PR
 
 on:
   pull_request:
   workflow_call:
 
 jobs:
+  add-label:
+    name: Add Label
+    permissions: write-all
+    if: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.ref == 'main' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: dorny/paths-filter@v2
+        id: filter
+        with:
+          filters: |
+            py:
+              - '**.py'
+      - uses: christianvuerings/add-labels@v1
+        if: steps.filter.outputs.py == 'true'
+        with:
+          labels: deploy
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
   test:
     name: Tests
     runs-on: ubuntu-latest
@@ -22,6 +41,7 @@ jobs:
           pip install -r requirements-dev.txt
       - name: Run tests
         run: pytest
+
   lint:
     name: Lint
     runs-on: ubuntu-latest
