@@ -77,6 +77,7 @@ class TestMonitorOrchestrator:
         assert loaded_monitors[0].searcher.episode_number == 10
 
         jobs_results = self.orchestrator.run_search_job_iteration(self.owner_id)
+        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
         jobs_results_list = list(jobs_results)
         assert len(jobs_results_list) == 0
         assert len(loaded_monitors) == 3  # without search results JobSetting didn't change
