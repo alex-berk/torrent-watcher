@@ -163,7 +163,7 @@ class TgBotRunner:
         return active_monitor
 
     def download_new_finds(self, job_owner_id: int) -> None:
-        for found_item in self.monitors_orchestrator.run_search_jobs(job_owner_id):
+        for found_item in self.monitors_orchestrator.run_search_jobs(owner_id=job_owner_id):
             download_type = found_item.job_settings.searcher.monitor_type
             self.torrent_client.add_download(found_item.magnet_link, download_type)
 
@@ -261,7 +261,6 @@ class TgBotRunner:
             text="Added monitor job", reply_markup=ReplyKeyboardRemove())
         # doesn't exit the context and goes into recursion
 
-        self.download_new_finds(update.effective_chat.id)
         return ConversationHandler.END
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):

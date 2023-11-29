@@ -96,17 +96,20 @@ class MonitorOrchestrator:
         except StopIteration:
             return
 
-    def add_monitor_job(self, setting: MonitorSetting) -> None:
+    def add_monitor_job(self, setting: MonitorSetting, run_after_init) -> None | JobResult:
         self._settings.append(setting)
         self._save_settings()
+        if run_after_init:
+            return self.run_search_jobs([setting])
 
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
         self._save_settings()
 
-    def add_monitor_job_from_dict(self, settings_dict: dict) -> None:
+    def add_monitor_job_from_dict(self, settings_dict: dict,
+                                  run_after_init: bool = True) -> None:
         settings = self._dict_to_setting(settings_dict)
-        self.add_monitor_job(settings)
+        self.add_monitor_job(settings, run_after_init)
 
     def get_jobs_by_owner_id(self, owner_id) -> Generator[MonitorSetting, None, None]:
         self._update_monitor_settings_from_json()
@@ -114,7 +117,7 @@ class MonitorOrchestrator:
                          if s.owner_id == owner_id)
         return jobs_filtered
 
-    def run_search_job_iteration(self, owner_id, jobs_to_run: Iterable[MonitorSetting] = None) \
+    def run_search_job_iteration(self, jobs_to_run: Iterable[MonitorSetting] = None, owner_id=None) \
             -> list[JobResult]:
         eligible_jobs = jobs_to_run or self.get_jobs_by_owner_id(owner_id)
         jobs = [JobResult(job.searcher.look(), job)
@@ -126,12 +129,16 @@ class MonitorOrchestrator:
         self._save_settings()
         return jobs_with_results
 
-    def run_search_jobs(self, owner_id: str = None) -> list[JobResult]:
+    def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] = None,
+                        owner_id: str = None) -> list[JobResult]:
         jobs_with_results_all: list[JobResult] = []
-        iteration_result = self.run_search_job_iteration(owner_id)
+        if jobs_to_run:
+            iteration_result = self.run_search_job_iteration(jobs_to_run)
+        else:
+            iteration_result = self.run_search_job_iteration(owner_id=owner_id)
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
             jobs_for_next_iteration = (job.job_settings for job in iteration_result
                                        if job.job_settings.searcher.monitor_type == "show")
-            iteration_result = self.run_search_job_iteration(owner_id, jobs_for_next_iteration)
+            iteration_result = self.run_search_job_iteration(jobs_for_next_iteration)
         return jobs_with_results_all

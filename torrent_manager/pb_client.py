@@ -13,7 +13,7 @@ class TorrentDetails:
     status: str
     info_hash: str
 
-# TODO: add an ABC class for monitor with look() abstr method
+# TODO: add an ABC class for monitor with look() abstr method, make general class not aware of data provider
 
 
 class PBSearcher:
@@ -63,14 +63,14 @@ class PBSearcher:
         if len(search_results) == 1 and \
                 search_results[0]["name"] == "No results returned":
             return []
-        search_results_formatted = [TorrentDetails(
+        search_results_formatted = (TorrentDetails(
             result["name"],
             self._details_page_prefix + result["id"],
             int(result["size"]) / 8**10,
             int(result["seeders"]),
             result["status"],
             result["info_hash"]
-        ) for result in search_results]
+        ) for result in search_results)
         search_results_formatted = sorted(
             search_results_formatted, key=lambda x: x.seeds, reverse=True)
         return search_results_formatted
