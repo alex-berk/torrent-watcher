@@ -1,5 +1,6 @@
 from typing import Generator, Iterable
 from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
+from torrent_manager.sr_monitor import SRMonitor
 import os
 from dataclasses import dataclass
 import json
@@ -8,7 +9,7 @@ import json
 @dataclass
 class MonitorSetting:
     owner_id: int
-    searcher: PBSearcher | PBMonitor
+    searcher: PBSearcher | PBMonitor | SRMonitor  # TODO: definitely add interface
     silent: bool = True
 
 
@@ -54,6 +55,15 @@ class MonitorOrchestrator:
                         episode_number=setting["episode"],
                         size_limit_gb=setting.get("size_limit", 0),
                         uuid=setting.get("uuid")
+                    )
+                )
+            case "show-sr":
+                return MonitorSetting(
+                    owner_id=setting["owner_id"],
+                    silent=setting.get("silent", True),
+                    searcher=SRMonitor(
+                        name=setting["name"],
+                        torrent_file=setting["torrent_file"]
                     )
                 )
             case "movie":
