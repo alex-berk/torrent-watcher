@@ -133,7 +133,7 @@ class MonitorOrchestrator:
         jobs = [JobResult(job.searcher.look(), job)
                 for job in eligible_jobs]
         jobs_with_results = [j for j in jobs if j.result]
-        done_jobs = (j for j in jobs
+        done_jobs = (j for j in jobs_with_results
                      if j.job_settings.searcher.monitor_type == "movie")
         [self.delete_monitor_job(job.job_settings) for job in done_jobs]
         self._save_settings()
