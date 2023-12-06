@@ -163,7 +163,7 @@ class TgBotRunner:
         return active_monitor
 
     def download_new_finds(self, job_owner_id: int) -> None:
-        for found_item in self.monitors_orchestrator.run_search_jobs(job_owner_id):
+        for found_item in self.monitors_orchestrator.run_search_jobs(owner_id=job_owner_id):
             download_type = found_item.job_settings.searcher.monitor_type
             self.torrent_client.add_download(found_item.magnet_link, download_type)
 
@@ -254,14 +254,15 @@ class TgBotRunner:
             orchestrator_params["episode"] = context.user_data["episode"]
             orchestrator_params["size_limit"] = context.user_data.get(
                 "size_limit", 0)
-        self.monitors_orchestrator.add_monitor_job_from_dict(
+        results = self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
+        for result in results:
+            self.torrent_client.add_download(result.magnet_link, result.job_settings.searcher.monitor_type)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Added monitor job", reply_markup=ReplyKeyboardRemove())
         # doesn't exit the context and goes into recursion
 
-        self.download_new_finds(update.effective_chat.id)
         return ConversationHandler.END
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
