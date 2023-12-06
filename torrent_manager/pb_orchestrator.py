@@ -84,9 +84,6 @@ class MonitorOrchestrator:
                 setting_obj["season"] = setting.searcher.season_number
                 setting_obj["episode"] = setting.searcher.episode_number
                 setting_obj["size_limit"] = setting.searcher.size_limit_gb
-            case "show-sr":
-                setting["name"] = setting.searcher.name
-                setting["torrent_file"] = setting.searcher.torrent_file
 
         return setting_obj
 
