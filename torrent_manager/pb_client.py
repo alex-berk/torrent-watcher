@@ -8,7 +8,7 @@ from uuid import uuid4
 class TorrentDetails:
     name: str
     link: str
-    size_gb: int
+    size_gb: float
     seeds: int
     status: str
     info_hash: str
@@ -32,7 +32,7 @@ class PBSearcher:
         "udp://open.stealth.si:80/announce",
     ]
 
-    def __init__(self, default_query: str = None, uuid: str = None) -> None:
+    def __init__(self, default_query: str = "", uuid: str = "") -> None:
         self.default_query = default_query
         self.monitor_type = "movie"
         self.uuid = uuid or str(uuid4())
@@ -50,7 +50,7 @@ class PBSearcher:
             {torrent_details.name}{trackers_list_formatted}"
         return link
 
-    def search_torrent(self, query: str = None) -> list[TorrentDetails]:
+    def search_torrent(self, query: str = "") -> list[TorrentDetails]:
         if not query:
             query = self.default_query
         try:
@@ -64,12 +64,12 @@ class PBSearcher:
                 search_results[0]["name"] == "No results returned":
             return []
         search_results_formatted = (TorrentDetails(
-            result["name"],
-            self._details_page_prefix + result["id"],
-            int(result["size"]) / 8**10,
-            int(result["seeders"]),
-            result["status"],
-            result["info_hash"]
+            name=result["name"],
+            link=self._details_page_prefix + result["id"],
+            size_gb=int(result["size"]) / 8**10,
+            seeds=int(result["seeders"]),
+            status=result["status"],
+            info_hash=result["info_hash"]
         ) for result in search_results)
         search_results_formatted = sorted(
             search_results_formatted, key=lambda x: x.seeds, reverse=True)
@@ -85,7 +85,7 @@ class PBSearcher:
 
 class PBMonitor(PBSearcher):
     def __init__(self, show_name: str, season_number: int, episode_number: int,
-                 uuid: str = None, size_limit_gb: int = None, only_vips=False):
+                 uuid: str = "", size_limit_gb: float = 0, only_vips=False):
         self.monitor_type = "show"
         self.show_name = show_name
         self.season_number = season_number

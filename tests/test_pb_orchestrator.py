@@ -1,3 +1,4 @@
+import pytest
 import os
 import json
 from torrent_manager import MonitorOrchestrator, MonitorSetting, PBSearcher, PBMonitor, JobResult
@@ -48,11 +49,17 @@ class TestMonitorOrchestrator:
     def teardown_method(self, method):
         os.remove("settings.json")
 
-    def test_init(self):
+    def test_job_from_dict(self):
         loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
         assert len(loaded_monitors) == 3
         assert loaded_monitors[0].searcher.default_query == "the last of us s01e10"
         assert loaded_monitors[-1].searcher.default_query == "the matrix"
+
+    def test_job_from_dict_invalid_monitor_type(self):
+        with pytest.raises(ValueError):
+            self.orchestrator.add_monitor_job_from_dict({
+                "monitor_type": "invalid_monitor_type"
+            })
 
     def test_search_results(self, mock_response):
         jobs_results = self.orchestrator.run_search_job_iteration(owner_id=self.owner_id)
@@ -110,7 +117,7 @@ class TestMonitorOrchestrator:
 
     def test_add_job(self):
         result = self.orchestrator.add_monitor_job(MonitorSetting(self.owner_id, PBSearcher("New Job")), False)
-        assert result is None
+        assert len(result) == 0
 
         monitor_list = self.orchestrator.get_user_monitors(self.owner_id)
         assert len(monitor_list) == 4

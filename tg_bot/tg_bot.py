@@ -254,8 +254,10 @@ class TgBotRunner:
             orchestrator_params["episode"] = context.user_data["episode"]
             orchestrator_params["size_limit"] = context.user_data.get(
                 "size_limit", 0)
-        self.monitors_orchestrator.add_monitor_job_from_dict(
+        results = self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
+        for result in results:
+            self.torrent_client.add_download(result.magnet_link, result.job_settings.searcher.monitor_type)
         await context.bot.send_message(
             chat_id=update.effective_chat.id,
             text="Added monitor job", reply_markup=ReplyKeyboardRemove())
