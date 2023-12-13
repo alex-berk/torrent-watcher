@@ -83,8 +83,10 @@ class PBSearcher:
     def look(self) -> TorrentDetails | None:
         logger.info(f"Monitor running: {self}", **self.to_dict())
         try:
-            logger.success(f"Monitor {self} found results", **self.to_dict())
-            return self.search_torrent(self.default_query)[0]
+            result = self.search_torrent(self.default_query)[0]
+            if result:
+                logger.success(f"Monitor {self} found results", **self.to_dict())
+            return result
         except IndexError:
             return
 
