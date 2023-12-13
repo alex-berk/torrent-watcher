@@ -1,3 +1,4 @@
+from logger import logger
 import requests
 import json
 from dataclasses import dataclass
@@ -76,7 +77,7 @@ class PBSearcher:
         return search_results_formatted
 
     def look(self) -> TorrentDetails | None:
-        print(f"Monitor running: {self}")
+        logger.info(f"Monitor running: {self}")
         try:
             return self.search_torrent(self.default_query)[0]
         except IndexError:
@@ -137,12 +138,12 @@ class PBMonitor(PBSearcher):
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
             new_episode = next(available_downloads)
-            print(f"Monitor {self}: found new episode")
+            logger.success(f"Monitor {self}: found new episode")
             self.episode_number += 1
             return new_episode
         except StopIteration:
             return
 
     def look(self) -> TorrentDetails | None:
-        print(f"Monitor running: {self}")
+        logger.info(f"Monitor running: {self}")
         return self._find_new_episode()
