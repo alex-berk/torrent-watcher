@@ -1,8 +1,9 @@
 from typing import Iterable
-from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
 import os
 from dataclasses import dataclass
 import json
+from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
+from logger import logger
 
 
 @dataclass
@@ -137,6 +138,7 @@ class MonitorOrchestrator:
 
     def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] | None = None,
                         owner_id: int = 0) -> list[JobResult]:
+        logger.debug("running search jobs")
         jobs_with_results_all: list[JobResult] = []
         if jobs_to_run:
             iteration_result = self.run_search_job_iteration(jobs_to_run)

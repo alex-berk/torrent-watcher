@@ -2,6 +2,7 @@ import requests
 import json
 from dataclasses import dataclass
 from uuid import uuid4
+from logger import logger
 
 
 @dataclass
@@ -43,6 +44,9 @@ class PBSearcher:
     def __str__(self) -> str:
         return f"(M) / {self.default_query}"
 
+    def to_dict(self) -> dict:
+        return {"monitor_type": self.monitor_type, "default_query": self.default_query, "uuid": self.uuid}
+
     @classmethod
     def generate_magnet_link(cls, torrent_details: TorrentDetails) -> str:
         trackers_list_formatted = "&tr=".join([""] + cls._trackers_list)
@@ -53,6 +57,7 @@ class PBSearcher:
     def search_torrent(self, query: str = "") -> list[TorrentDetails]:
         if not query:
             query = self.default_query
+        logger.debug("searching pirate bay", query=query)
         try:
             r = requests.get(self._search_host, params={"q": query}, timeout=1)
         except requests.exceptions.ReadTimeout:
@@ -76,8 +81,9 @@ class PBSearcher:
         return search_results_formatted
 
     def look(self) -> TorrentDetails | None:
-        print(f"Monitor running: {self}")
+        logger.info(f"Monitor running: {self}", **self.to_dict())
         try:
+            logger.success(f"Monitor {self} found results", **self.to_dict())
             return self.search_torrent(self.default_query)[0]
         except IndexError:
             return
@@ -97,19 +103,8 @@ class PBMonitor(PBSearcher):
         self.uuid = uuid or str(uuid4())
 
     def __repr__(self):
-        fields = {
-            "show_name": self.show_name,
-            "season_number": self.season_number,
-            "episode_number": self.episode_number,
-            "uuid": self.uuid
-        }
-        for optional_field_key, optional_field_val in (("size_limit_gb", self.size_limit_gb),
-                                                       ("only_vips", self.only_vips),
-                                                       ("whitelisted_statuses", self.whitelisted_statuses)):
-            if optional_field_val:
-                fields[optional_field_key] = optional_field_val
-
-        fields_str = ", ".join((f"{key}={val}" for key, val in fields.items()))
+        fields_str = ", ".join((f"{key}={val}" for key, val in self.to_dict().items()
+                                if key != "monitor_type"))
         return f"PBMonitor({fields_str})"
 
     def __str__(self) -> str:
@@ -117,6 +112,22 @@ class PBMonitor(PBSearcher):
         if self.size_limit_gb:
             items += [f"<={self.size_limit_gb}Gb"]
         return " / ".join(items)
+
+    def to_dict(self) -> dict:
+        fields = {
+            "show_name": self.show_name,
+            "season_number": self.season_number,
+            "episode_number": self.episode_number,
+            "uuid": self.uuid,
+            "monitor_type": self.monitor_type
+        }
+        for optional_field_key, optional_field_val in (("size_limit_gb", self.size_limit_gb),
+                                                       ("only_vips", self.only_vips),
+                                                       ("whitelisted_statuses", self.whitelisted_statuses)):
+            if optional_field_val:
+                fields[optional_field_key] = optional_field_val
+
+        return fields
 
     @property
     def default_query(self) -> str:
@@ -137,12 +148,12 @@ class PBMonitor(PBSearcher):
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
             new_episode = next(available_downloads)
-            print(f"Monitor {self}: found new episode")
+            logger.success(f"Monitor {self}: found new episode", **self.to_dict())
             self.episode_number += 1
             return new_episode
         except StopIteration:
             return
 
     def look(self) -> TorrentDetails | None:
-        print(f"Monitor running: {self}")
+        logger.info(f"Monitor running: {self}", **self.to_dict())
         return self._find_new_episode()
