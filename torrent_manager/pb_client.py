@@ -83,6 +83,7 @@ class PBSearcher:
     def look(self) -> TorrentDetails | None:
         logger.info(f"Monitor running: {self}", **self.to_dict())
         try:
+            logger.success(f"Monitor {self} found results", **self.to_dict())
             return self.search_torrent(self.default_query)[0]
         except IndexError:
             return
@@ -147,7 +148,7 @@ class PBMonitor(PBSearcher):
             lambda x: x.status in self.whitelisted_statuses, available_downloads)
         try:
             new_episode = next(available_downloads)
-            logger.success(f"Monitor {self}: found new episode")
+            logger.success(f"Monitor {self}: found new episode", **self.to_dict())
             self.episode_number += 1
             return new_episode
         except StopIteration:
