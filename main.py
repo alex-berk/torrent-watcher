@@ -1,4 +1,5 @@
 from multiprocessing import Process
+from loguru import logger
 from time import sleep
 from telegram.ext import ApplicationBuilder
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
@@ -23,12 +24,14 @@ runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(),
 
 
 def run_search_jobs_on_timer(timer_seconds):
+    logger.info("run_search_jobs_on_timer started")
     runner.download_new_finds(admin_tg_id)
     sleep(timer_seconds)
     run_search_jobs_on_timer(timer_seconds)
 
 
 def bot_poll():
+    logger.info("bot_poll started")
     runner.tg_client.run_polling()
 
 
