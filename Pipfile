@@ -24,4 +24,4 @@ python_full_version = "3.11.1"
 
 [scripts]
 build = "docker build . -t torrent-watcher"
-start = "docker run -d -v ./data:/usr/data -v ./logs:/usr/logs --name torrent-watcher --restart unless-stopped torrent-watcher"
+start = "docker run -d -v ./data:/usr/data -v ./logs:/usr/logs -e TZ=Asia/Jerusalem --name torrent-watcher --restart unless-stopped torrent-watcher"
