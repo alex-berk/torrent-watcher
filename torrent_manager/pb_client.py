@@ -57,7 +57,6 @@ class PBSearcher:
     def search_torrent(self, query: str = "") -> list[TorrentDetails]:
         if not query:
             query = self.default_query
-        logger.debug("searching pirate bay", query=query)
         try:
             r = requests.get(self._search_host, params={"q": query}, timeout=1)
         except requests.exceptions.ReadTimeout:
