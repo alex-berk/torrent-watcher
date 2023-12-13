@@ -1,7 +1,8 @@
-from transmission_rpc import Client, Torrent, error as transmission_error
-from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH
 from os import path
 from datetime import datetime
+from transmission_rpc import Client, Torrent, error as transmission_error
+from config import MEDIA_DOWNLOAD_PATH, REGULAR_DOWNLOAD_PATH
+from logger import logger
 
 
 class TransmissionClient(Client):
@@ -23,19 +24,20 @@ class TransmissionClient(Client):
         torrent_age_days = (current_date - torrent_date).days
         return torrent_age_days <= 3 or torrent.status in self._pending_statuses
 
-    def add_download(self, magnet_link: str, download_type: str) -> Torrent | None:
+    def add_download(self, magnet_link: str | bytes, download_type: str) -> Torrent | None:
         download_dir = self.download_paths[download_type]
         try:
             download = self.add_torrent(magnet_link, download_dir=download_dir)
-        except transmission_error.TransmissionError:
+        except transmission_error.TransmissionError as e:
+            logger.error(e)
             return
         return download
 
-    def download_from_file(self, filename, download_type) -> Torrent:
+    def download_from_file(self, filename, download_type) -> Torrent | None:
         with open(filename, "rb") as f:
             return self.add_download(f, download_type)
 
-    def find_torrent(self, torrent_name: str) -> Torrent:
+    def find_torrent(self, torrent_name: str) -> Torrent | None:
         torrents_list = self.get_torrents()
         result = filter(lambda t: t.name == torrent_name, torrents_list)
         try:

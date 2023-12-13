@@ -1,8 +1,8 @@
 from multiprocessing import Process
-from loguru import logger
 from time import sleep
 from telegram.ext import ApplicationBuilder
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
+from logger import logger
 
 from torrent_manager import TransmissionClient, MonitorOrchestrator, PBSearcher
 from tg_bot import TgBotRunner
@@ -21,7 +21,6 @@ runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(),
                      torrent_searcher=torrent_searcher,
                      monitors_orchestrator=monitors_orchestrator,
                      tg_user_whitelist=users_whitelist)
-
 
 def run_search_jobs_on_timer(timer_seconds):
     logger.info("run_search_jobs_on_timer started")
