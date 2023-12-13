@@ -22,6 +22,7 @@ runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(),
                      monitors_orchestrator=monitors_orchestrator,
                      tg_user_whitelist=users_whitelist)
 
+
 def run_search_jobs_on_timer(timer_seconds):
     logger.info("run_search_jobs_on_timer started")
     runner.download_new_finds(admin_tg_id)
