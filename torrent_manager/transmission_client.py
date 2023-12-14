@@ -28,8 +28,8 @@ class TransmissionClient(Client):
         download_dir = self.download_paths[download_type]
         try:
             download = self.add_torrent(magnet_link, download_dir=download_dir)
-        except transmission_error.TransmissionError as e:
-            logger.error(e)
+        except transmission_error.TransmissionError:
+            logger.error("error adding download", magnet=magnet_link)
             return
         return download
 
