@@ -58,7 +58,7 @@ class PBSearcher:
         if not query:
             query = self.default_query
         try:
-            r = requests.get(self._search_host, params={"q": query}, timeout=1)
+            r = requests.get(self._search_host, params={"q": query})
         except requests.exceptions.ReadTimeout:
             logger.warning("timeout waiting response from external host", query=query)
             return []
