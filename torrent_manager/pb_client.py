@@ -60,10 +60,13 @@ class PBSearcher:
         try:
             r = requests.get(self._search_host, params={"q": query}, timeout=1)
         except requests.exceptions.ReadTimeout:
+            logger.warning("timeout waiting response from external host", query=query)
             return []
-        if r.status_code != 200:
+        if (status_code := r.status_code) != 200:
+            logger.warning("error from external host", query=query, status_code=status_code)
             return []
         search_results = json.loads(r.text)
+        logger.debug("search_torrent ran", query=query, results_len=len(search_results))
         if len(search_results) == 1 and \
                 search_results[0]["name"] == "No results returned":
             return []
@@ -81,13 +84,10 @@ class PBSearcher:
 
     def look(self) -> TorrentDetails | None:
         logger.info(f"Monitor running: {self}", **self.to_dict())
-        try:
-            result = self.search_torrent(self.default_query)[0]
-            if result:
-                logger.success(f"Monitor {self} found results", **self.to_dict())
-            return result
-        except IndexError:
-            return
+        if result := self.search_torrent(self.default_query):
+            logger.success(f"Monitor {self} found results", **self.to_dict())
+            return result[0]
+        logger.debug(f"Monitor {self} didn't find any results", **self.to_dict())
 
 
 class PBMonitor(PBSearcher):

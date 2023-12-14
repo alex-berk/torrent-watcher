@@ -29,7 +29,7 @@ class TransmissionClient(Client):
         try:
             download = self.add_torrent(magnet_link, download_dir=download_dir)
         except transmission_error.TransmissionError as e:
-            logger.error(e)
+            logger.warning(e)
             return
         return download
 

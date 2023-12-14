@@ -13,13 +13,14 @@ logger.add(sys.stdout, colorize=True, format="<level>{time}</level> <green>{mess
 logger.add(
     logtail_handler,
     format="{message}",
-    level="INFO",
+    level="DEBUG",
     backtrace=False,
     diagnose=False
 )
 
 logger.add(
     "logs/{time:YYYY-MM-DD}.log",
-    rotation="1 day",
-    retention="1 month"
+    rotation="0:00",
+    retention="1 month",
+    enqueue=True
 )
