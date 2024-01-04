@@ -45,15 +45,15 @@ class TestMonitorOrchestrator:
         self.orchestrator = MonitorOrchestrator("settings.json")
         [self.orchestrator.add_monitor_job_from_dict(job, False) for job in jobs]
         self.owner_id = 1111111
+        self.loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
 
     def teardown_method(self, method):
         os.remove("settings.json")
 
     def test_job_from_dict(self):
-        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
-        assert len(loaded_monitors) == 3
-        assert loaded_monitors[0].searcher.default_query == "the last of us s01e10"
-        assert loaded_monitors[-1].searcher.default_query == "the matrix"
+        assert len(self.loaded_monitors) == 3
+        assert self.loaded_monitors[0].searcher.default_query == "the last of us s01e10"
+        assert self.loaded_monitors[-1].searcher.default_query == "the matrix"
 
     def test_job_from_dict_invalid_monitor_type(self):
         with pytest.raises(ValueError):
@@ -76,19 +76,17 @@ class TestMonitorOrchestrator:
         expected_queries = ['the last of us s01e10', 'chainsaw man s02e01', 'the matrix',
                             'the last of us s01e11', 'chainsaw man s02e02', 'the last of us s01e12',
                             'chainsaw man s02e03']
-        assert mock_response_iteration["queries"] == expected_queries
+        assert mock_response_iteration.queries == expected_queries
 
     def test_search_results_empty(self, mock_response_empty):
-        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
-        assert len(loaded_monitors) == 3
-        assert loaded_monitors[0].searcher.episode_number == 10
+        assert len(self.loaded_monitors) == 3
+        assert self.loaded_monitors[0].searcher.episode_number == 10
 
         jobs_results = self.orchestrator.run_search_job_iteration(owner_id=self.owner_id)
-        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
         jobs_results_list = list(jobs_results)
         assert len(jobs_results_list) == 0
-        assert len(loaded_monitors) == 3  # without search results JobSetting didn't change
-        assert loaded_monitors[0].searcher.episode_number == 10
+        assert len(self.loaded_monitors) == 3  # without search results JobSetting didn't change
+        assert self.loaded_monitors[0].searcher.episode_number == 10
 
     def test_search_results_error(self, mock_response_404):
         jobs_results = self.orchestrator.run_search_job_iteration(owner_id=self.owner_id)
@@ -96,14 +94,13 @@ class TestMonitorOrchestrator:
         assert len(jobs_results_list) == 0
 
     def test_episode_update(self, mock_response):
-        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
-        assert len(loaded_monitors) == 3
-        assert loaded_monitors[0].searcher.episode_number == 10
+        assert len(self.loaded_monitors) == 3
+        assert self.loaded_monitors[0].searcher.episode_number == 10
 
         self.orchestrator.run_search_job_iteration(owner_id=self.owner_id)
-        loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
-        assert len(loaded_monitors) == 2
-        assert loaded_monitors[0].searcher.episode_number == 11
+        self.loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
+        assert len(self.loaded_monitors) == 2
+        assert self.loaded_monitors[0].searcher.episode_number == 11
 
     def test_save_settings(self, mock_response):
         saved_settings = read_settings_file()
@@ -130,20 +127,18 @@ class TestMonitorOrchestrator:
         assert isinstance(result, list)
         assert len(result) == 1
         assert isinstance(result[0], JobResult)
-        assert mock_response["calls"] == 1
+        assert mock_response.calls == 1
 
     def test_add_job_autostart_multiple_results(self, mock_response_iteration):
         result = self.orchestrator.add_monitor_job(MonitorSetting(self.owner_id, PBMonitor("New Job", 1, 1)), True)
         assert isinstance(result, list)
         assert len(result) == 5
         assert isinstance(result[0], JobResult)
-        assert mock_response_iteration["calls"] == 6  # check that only this job was using search
+        assert mock_response_iteration.calls == 6  # check that only this job was using search
 
     def test_remove_job(self):
-        monitor_list = self.orchestrator.get_user_monitors(self.owner_id)
-
-        self.orchestrator.delete_monitor_job(monitor_list[1])
-        monitor_list = self.orchestrator.get_user_monitors(self.owner_id)
-        assert len(monitor_list) == 2
+        self.orchestrator.delete_monitor_job(self.loaded_monitors[1])
+        self.loaded_monitors = self.orchestrator.get_user_monitors(self.owner_id)
+        assert len(self.loaded_monitors) == 2
         saved_settings = read_settings_file()
         assert len(saved_settings) == 2

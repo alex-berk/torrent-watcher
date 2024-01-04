@@ -87,7 +87,6 @@ class PBSearcher:
         if result := self.search_torrent(self.default_query):
             logger.success(f"Monitor {self} found results", **self.to_dict())
             return result[0]
-        logger.debug(f"Monitor {self} didn't find any results", **self.to_dict())
 
 
 class PBMonitor(PBSearcher):
