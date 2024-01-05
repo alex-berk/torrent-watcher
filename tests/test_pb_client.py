@@ -78,6 +78,6 @@ class TestPBMonitor:
         self.monitor.episode_number = 0
         self.monitor.season_number = 0
         self.monitor.look()
-        assert mock_response["queries"][0] == "attack on titan s00e00"
+        assert mock_response.queries[0] == "attack on titan s00e00"
         self.monitor.look()
-        assert mock_response["queries"][1] == "attack on titan s00e01"
+        assert mock_response.queries[1] == "attack on titan s00e01"

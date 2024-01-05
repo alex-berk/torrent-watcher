@@ -1,19 +1,33 @@
 import pytest
 from typing import Callable
 from torrent_manager.pb_client import requests
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from enum import Enum
 import json
 
 
 @dataclass
 class PBResponse:
-    data: dict = None
+    data: dict = field(default_factory=dict)
     status_code: int = 200
-    text: str = None
+    text: str = ""
 
     def __post_init__(self):
         if self.data:
             self.text = json.dumps(self.data)
+
+
+@dataclass
+class Buffer:
+    urls: list = field(default_factory=list)
+    queries: list = field(default_factory=list)
+    calls: int = 0
+
+
+class ResponseType(Enum):
+    EMPTY = "empty"
+    NOT_FOUND = "not found"
+    ITERATION = "iteration"
 
 
 with open("tests/fixtures/pb_response_no_data.json", "r") as file:
@@ -25,22 +39,23 @@ with open("tests/fixtures/pb_response.json", "r") as file:
     pb_response = PBResponse(data)
 
 
-def generate_mock_get(response_type: str = "") -> tuple[Callable[[str, any], PBResponse], dict]:
-    buffer = {"urls": [], "queries": [], "calls": 0}
+def generate_mock_get(response_type: ResponseType | None = None) \
+        -> tuple[Callable[[str, any], PBResponse], Buffer]:
+    buffer = Buffer()
 
-    def mock_get(url: str, **kwargs) -> PBResponse:
-        query = kwargs.get("params").get("q")
-        buffer["urls"].append(url)
-        buffer["queries"].append(query)
-        buffer["calls"] += 1
+    def mock_get(url: str = "", **kwargs) -> PBResponse:
+        query = kwargs.get("params", {}).get("q")
+        buffer.urls.append(url)
+        buffer.queries.append(query)
+        buffer.calls += 1
 
         match response_type:
-            case "empty":
+            case ResponseType.EMPTY:
                 return pb_response_no_results
-            case "404":
+            case ResponseType.NOT_FOUND:
                 return PBResponse(status_code=404)
-            case "iteration":
-                if buffer["calls"] > 5:
+            case ResponseType.ITERATION:
+                if buffer.calls > 5:
                     return pb_response_no_results
                 return pb_response
             case _:
@@ -58,21 +73,21 @@ def mock_response(monkeypatch: pytest.MonkeyPatch):
 
 @pytest.fixture
 def mock_response_iteration(monkeypatch: pytest.MonkeyPatch):
-    mock_get, buffer = generate_mock_get("iteration")
+    mock_get, buffer = generate_mock_get(ResponseType.ITERATION)
     monkeypatch.setattr(requests, "get", mock_get)
     return buffer
 
 
 @pytest.fixture
 def mock_response_empty(monkeypatch: pytest.MonkeyPatch):
-    mock_get, buffer = generate_mock_get("empty")
+    mock_get, buffer = generate_mock_get(ResponseType.EMPTY)
     monkeypatch.setattr(requests, "get", mock_get)
     return buffer
 
 
 @pytest.fixture
 def mock_response_404(monkeypatch: pytest.MonkeyPatch):
-    mock_get, buffer = generate_mock_get("404")
+    mock_get, buffer = generate_mock_get(ResponseType.NOT_FOUND)
     monkeypatch.setattr(requests, "get", mock_get)
     return buffer
 

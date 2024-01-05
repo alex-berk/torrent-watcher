@@ -1,5 +1,6 @@
-FROM python:3.11
+FROM python:3.11.1
 WORKDIR /usr/
 COPY . .
-RUN pip install --no-cache-dir -r requirements.txt
-CMD [ "python", "./main.py" ]
+RUN pip install pipenv
+RUN pipenv sync
+CMD [ "pipenv", "run", "python", "./main.py" ]

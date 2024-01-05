@@ -11,29 +11,29 @@ jobs:
       MEDIA_DOWNLOAD_PATH: "/media"
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install Dev Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python-version: "3.11.1"
+          cache: "pipenv"
+      - name: Install Pipenv
+        run: pip install pipenv
+      - name: Install Dependecies
+        run: pipenv sync -d
       - name: Run tests
-        run: pytest
+        run: pipenv run pytest
 
   lint:
     name: Lint
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Set up Python 3.11
-        uses: actions/setup-python@v4
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
-      - name: Install Dev Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements-dev.txt
+          python-version: "3.11.1"
+          cache: "pip"
+      - name: Install flake8
+        run: pip install flake8
       - name: Run lint
         run: flake8
