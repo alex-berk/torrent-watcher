@@ -16,7 +16,9 @@ torrent_searcher = PBSearcher()
 monitors_orchestrator = MonitorOrchestrator()
 transmission = TransmissionClient(TRANSMISSION_HOST)
 
-runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(), torrent_client=transmission, torrent_searcher=torrent_searcher,
+runner = TgBotRunner(tg_client=ApplicationBuilder().token(TG_BOT_TOKEN).build(),
+                     torrent_client=transmission,
+                     torrent_searcher=torrent_searcher,
                      monitors_orchestrator=monitors_orchestrator,
                      tg_user_whitelist=users_whitelist)
 
