@@ -14,13 +14,14 @@ jobs:
       - name: Setup Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: "3.11"
+          python-version: "3.11.1"
           cache: "pipenv"
-      - name: Install pipenv
-        run: curl https://raw.githubusercontent.com/pypa/pipenv/master/get-pipenv.py | python
-      - run: pipenv install
+      - name: Install Pipenv
+        run: pip install pipenv
+      - name: Install Dependecies
+        run: pipenv sync -d
       - name: Run tests
-        run: pytest
+        run: pipenv run pytest
 
   lint:
     name: Lint
