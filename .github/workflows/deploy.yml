@@ -9,7 +9,7 @@ on:
 
 jobs:
   deploy:
-    if: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'deploy') }}
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
     name: Deploy
     needs: tests
     runs-on: ubuntu-latest
