@@ -12,6 +12,8 @@ jobs:
     name: Deploy
     if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
     needs: tests
+    environment:
+      name: prod
     runs-on: ubuntu-latest
     steps:
       - name: "Deploy request"
