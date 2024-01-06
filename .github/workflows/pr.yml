@@ -26,3 +26,18 @@ jobs:
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yml
+
+  debug-deploy:
+    name: Debug Deploy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Output pull request params
+        run: echo $github.event.pull_request
+      - name: Output pull request params2
+        run: echo ${{github.event.pull_request}}
+      - name: Output pull request merged
+        run: echo ${{github.event.pull_request.merged}}
+      - name: Output pull request lables contains deploy
+        run: echo ${{contains(github.event.pull_request.labels.*.name, 'deploy')}}
+      - name: Output whole condition
+        run: echo ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
