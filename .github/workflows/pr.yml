@@ -26,16 +26,3 @@ jobs:
   tests:
     name: Tests
     uses: ./.github/workflows/tests.yml
-
-  debug-deploy:
-    name: Debug Deploy
-    runs-on: ubuntu-latest
-    steps:
-      - name: Output pull request merged
-        run: echo ${{github.event.pull_request.merged}}
-      - name: Output pull request lables contains deploy
-        if: false
-        run: echo ${{contains(github.event.pull_request.labels.*.name, 'deploy')}}
-      - name: Output whole condition
-        if: ${{ github.event.pull_request.merged == false && contains(github.event.pull_request.labels.*.name, 'deploy') }}
-        run: echo ${{ github.event.pull_request.merged == false && contains(github.event.pull_request.labels.*.name, 'deploy') }}
