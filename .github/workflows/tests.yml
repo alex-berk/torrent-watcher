@@ -4,29 +4,13 @@ on:
   workflow_call:
 
 jobs:
-  setup-job:
-    name: Setup
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - name: Setup Python 3.11
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.11.1"
-          cache: "pipenv"
-      - name: Install Pipenv
-        run: pip install pipenv
-      - name: Install Dependecies
-        run: pipenv sync -d
-
   test:
     name: Tests
-    needs: setup-job
     runs-on: ubuntu-latest
     env:
       MEDIA_DOWNLOAD_PATH: "/media"
     steps:
-      - uses: setup-job
+      - uses: ./.github/workflows/setup.yml
       - name: Run tests
         run: pipenv run pytest
 
