@@ -34,6 +34,8 @@ jobs:
       - name: Output pull request merged
         run: echo ${{github.event.pull_request.merged}}
       - name: Output pull request lables contains deploy
+        if: false
         run: echo ${{contains(github.event.pull_request.labels.*.name, 'deploy')}}
       - name: Output whole condition
-        run: echo ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
+        if: ${{ github.event.pull_request.merged == false && contains(github.event.pull_request.labels.*.name, 'deploy') }}
+        run: echo ${{ github.event.pull_request.merged == false && contains(github.event.pull_request.labels.*.name, 'deploy') }}
