@@ -10,18 +10,15 @@ on:
 jobs:
   deploy:
     name: Deploy
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
     needs: tests
     runs-on: ubuntu-latest
-    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
     steps:
-      - name: DEBUG - merged status
-        run: echo ${{ github.event.pull_request.merged }}
-      - name: DEBUG - condition status
-        run: echo ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
       - name: "Deploy request"
         if: false
         run: curl --fail-with-body ${{ secrets.DEPLOYER_HOST }} -X POST --data '{"project":"${{ github.event.repository.name }}"}'
 
   tests:
     name: Tests
+    if: ${{ github.event.pull_request.merged == true && contains(github.event.pull_request.labels.*.name, 'deploy') }}
     uses: ./.github/workflows/tests.yml
