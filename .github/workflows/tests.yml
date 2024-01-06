@@ -4,11 +4,9 @@ on:
   workflow_call:
 
 jobs:
-  test:
-    name: Tests
+  setup-job:
+    name: Setup
     runs-on: ubuntu-latest
-    env:
-      MEDIA_DOWNLOAD_PATH: "/media"
     steps:
       - uses: actions/checkout@v4
       - name: Setup Python 3.11
@@ -20,6 +18,15 @@ jobs:
         run: pip install pipenv
       - name: Install Dependecies
         run: pipenv sync -d
+
+  test:
+    name: Tests
+    needs: setup-job
+    runs-on: ubuntu-latest
+    env:
+      MEDIA_DOWNLOAD_PATH: "/media"
+    steps:
+      - uses: setup-job
       - name: Run tests
         run: pipenv run pytest
 
