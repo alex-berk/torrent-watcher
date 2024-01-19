@@ -4,18 +4,20 @@ LOG_FOLDER=logs
 LOG_HEALTH_FLAG="search_torrent ran"
 TIME_THRESHOLD=$(date --date "8 hours ago" +'%s')
 
-LOG_FILE="$LOG_FOLDER/$(ls -t $LOG_FOLDER | head -n 1)"
+LOG_FILE="$LOG_FOLDER/$(ls -t "$LOG_FOLDER" | head -n 1)"
 FRESHEST_LOG=$(tac $LOG_FILE | grep -m1 "$LOG_HEALTH_FLAG" | cut -d "|" -f 1)
-FRESHEST_LOG_DATE=$(date --date "$FRESHEST_LOG" +'%s')
+FRESHEST_LOG_DATE=$(date -d "$FRESHEST_LOG" +"%s")
 
 # Check that log was fetched
-if [ -z $FRESHEST_LOG ];
+if [ -z "$FRESHEST_LOG" ];
 then
-	exit 1
+        echo "healthcheck: couldn't fetch log timestamp"
+        exit 1
 fi
 
 # Check that fetched log is younger then 8 hrs
-if [ $TIME_THRESHOLD -lt $FRESHEST_LOG_DATE ];
+if [ "$TIME_THRESHOLD" -gt "$FRESHEST_LOG_DATE" ];
 then
-	exit 1
+        echo "healthcheck: freshest timestamp is too old"
+        exit 1
 fi
