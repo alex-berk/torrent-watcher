@@ -1,6 +1,7 @@
 from multiprocessing import Process
 from time import sleep
 from telegram.ext import ApplicationBuilder
+from telegram.error import NetworkError as TelegramNetworkError
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS
 from logger import logger
 
@@ -33,7 +34,10 @@ def run_search_jobs_on_timer(timer_seconds):
 @logger.catch
 def bot_poll():
     logger.debug("bot_poll started")
-    runner.tg_client.run_polling()
+    try:
+        runner.tg_client.run_polling()
+    except TelegramNetworkError as e:
+        logger.warning("Telegram Network Error", {"error": e})
 
 
 if __name__ == '__main__':
