@@ -5,7 +5,6 @@
       "steps": ["docker stop torrent-watcher", "docker rm torrent-watcher"],
       "optional": true
     },
-    { "name": "build", "steps": ["pipenv run build"] },
-    { "name": "start", "steps": ["pipenv run start"] }
+    { "name": "build", "steps": ["docker compose up -d"] }
   ]
 }

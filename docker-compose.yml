@@ -1,0 +1,12 @@
+version: "3"
+
+services:
+  torrent-watcher:
+    build: .
+    container_name: torrent-watcher
+    volumes:
+      - ./data:/usr/data
+      - ./logs:/usr/logs
+    environment:
+      - TZ=Asia/Jerusalem
+    restart: unless-stopped
