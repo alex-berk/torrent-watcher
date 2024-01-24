@@ -1,16 +1,18 @@
 import os
 from urllib.parse import unquote, parse_qs
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from typing import Optional
 
 from torrent_manager import PBSearcher, MonitorSetting, MonitorOrchestrator, \
     Torrent, TransmissionClient, TorrentDetails
+from logger import logger
 
 import asyncio
 import prettytable as pt
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, \
     ReplyKeyboardMarkup, ReplyKeyboardRemove, CallbackQuery
-from telegram.ext import ContextTypes, filters, CommandHandler, \
-    MessageHandler, CallbackQueryHandler, ConversationHandler
+from telegram.ext import Application, ContextTypes, filters, CommandHandler, \
+    MessageHandler, CallbackQueryHandler, ConversationHandler, CallbackContext
 
 
 MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
@@ -18,17 +20,15 @@ MONITOR_TYPE, SEARCH_QUERY, SEASON_AND_EPISODE, SIZE_LIMIT, SILENT = range(5)
 
 @dataclass
 class Storage:
-    saved_search_results: list[TorrentDetails]
-
-
-item_chosen: str or None
-active_torrent: str or None
+    saved_search_results: list[TorrentDetails | None] = field(default_factory=list)
+    item_chosen: str | None = None
+    active_torrent: str | None = None
 
 
 class TgBotRunner:
     # TODO: consider, if torrent_searcher and torrent_client should be passed to class
     # maybe, use factory pattern
-    def __init__(self, tg_client, torrent_client: TransmissionClient, torrent_searcher: PBSearcher,
+    def __init__(self, tg_client: Application, torrent_client: TransmissionClient, torrent_searcher: PBSearcher,
                  monitors_orchestrator: MonitorOrchestrator, tg_user_whitelist: list = None):
         self.tg_client = tg_client
         self.torrent_client = torrent_client
@@ -36,6 +36,7 @@ class TgBotRunner:
         self.monitors_orchestrator = monitors_orchestrator
         self.tg_user_whitelist = tg_user_whitelist or []
         self._storage = Storage([None] * 50)
+        self.tg_client.add_error_handler(callback=self.error_handler)
 
         # TODO: refactor with filters in command handlers
         auth_handler = MessageHandler(
@@ -116,6 +117,10 @@ class TgBotRunner:
         except StopIteration:
             return
 
+    @staticmethod
+    async def error_handler(update: Optional[object], context: CallbackContext):
+        logger.warning(context.error)
+
     @item_chosen.setter
     def item_chosen(self, item: TorrentDetails):
         self._storage.item_chosen = item.info_hash
@@ -152,7 +157,7 @@ class TgBotRunner:
 
     def get_search_result(self, hash: str):
         try:
-            return next(filter(lambda item: item.info_hash == hash, self.saved_search_results))
+            return next(filter(lambda item: item and item.info_hash == hash, self.saved_search_results))
         except StopIteration:
             return
 
