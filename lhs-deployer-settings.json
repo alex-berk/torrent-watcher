@@ -2,7 +2,7 @@
   "commands": [
     {
       "name": "docker cleanup",
-      "steps": ["docker stop torrent-watcher", "docker rm torrent-watcher"],
+      "steps": ["docker compose down"],
       "optional": true
     },
     { "name": "build", "steps": ["docker compose up -d"] }
