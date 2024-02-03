@@ -113,10 +113,11 @@ class TgBotRunner:
     def item_chosen(self):
         try:
             return next(
-                filter(lambda i: i.info_hash == self._storage.item_chosen, self._storage.saved_search_results))
+                filter(lambda i: i and i.info_hash == self._storage.item_chosen, self._storage.saved_search_results))
         except StopIteration:
             return
 
+    #! DOESN'T WORK
     @staticmethod
     async def error_handler(update: Optional[object], context: CallbackContext):
         logger.warning(context.error)
@@ -291,6 +292,7 @@ class TgBotRunner:
 
     async def set_monitor_search_query(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
         # TODO: check for handling invalid input
+        #! Doesn't cancel out properly
         content_type = update.message.text.lower()
         context.user_data["monitor_type"] = content_type
         await update.message.reply_text(f"What's the name of the {content_type}?",
