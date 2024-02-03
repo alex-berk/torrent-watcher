@@ -1,8 +1,5 @@
-from dotenv import load_dotenv
 from os import getenv
 
-
-load_dotenv()
 
 MEDIA_DOWNLOAD_PATH: str = getenv("MEDIA_DOWNLOAD_PATH") or ""
 REGULAR_DOWNLOAD_PATH: str = getenv("REGULAR_DOWNLOAD_PATH") or ""
