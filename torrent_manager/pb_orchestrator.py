@@ -127,8 +127,7 @@ class MonitorOrchestrator:
     async def run_search_job_iteration(self, jobs_to_run: Iterable[MonitorSetting] | None = None, owner_id=None) \
             -> list[JobResult]:
         eligible_jobs = jobs_to_run or self.get_jobs_by_owner_id(owner_id)
-        jobs_promises = ((asyncio.create_task(job.searcher.look()), job) for job in eligible_jobs)
-        jobs = await asyncio.gather(*[job.searcher.look() for job in eligible_jobs])
+        # TODO: just gather and then map
         jobs_with_results = [JobResult(result, job)
                              for job in eligible_jobs
                              if (result := await asyncio.gather(job.searcher.look()))]
