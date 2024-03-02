@@ -168,8 +168,8 @@ class TgBotRunner:
         active_monitor = self.monitors_orchestrator.get_monitor_by_uuid(monitor_uuid)
         return active_monitor
 
-    def download_new_finds(self, job_owner_id: int) -> None:
-        for found_item in self.monitors_orchestrator.run_search_jobs(owner_id=job_owner_id):
+    async def download_new_finds(self, job_owner_id: int) -> None:
+        for found_item in await self.monitors_orchestrator.run_search_jobs(owner_id=job_owner_id):
             download_type = found_item.job_settings.searcher.monitor_type
             self.torrent_client.add_download(found_item.magnet_link, download_type)
 
@@ -231,7 +231,7 @@ class TgBotRunner:
             reply_text = "You need to use this command with search query, like <i>/search Game of thrones s03</i>"
             return await context.bot.send_message(chat_id=update.effective_chat.id,
                                                   text=reply_text, parse_mode="html")
-        search_results = self.torrent_searcher.search_torrent(search_query)[:5]
+        search_results = (await self.torrent_searcher.search_torrent(search_query))[:5]
         if not search_results:
             return await context.bot.send_message(chat_id=update.effective_chat.id,
                                                   text="couldn't find anything")
@@ -260,7 +260,7 @@ class TgBotRunner:
             orchestrator_params["episode"] = context.user_data["episode"]
             orchestrator_params["size_limit"] = context.user_data.get(
                 "size_limit", 0)
-        results = self.monitors_orchestrator.add_monitor_job_from_dict(
+        results = await self.monitors_orchestrator.add_monitor_job_from_dict(
             orchestrator_params)
         for result in results:
             self.torrent_client.add_download(result.magnet_link, result.job_settings.searcher.monitor_type)
@@ -272,7 +272,7 @@ class TgBotRunner:
         return ConversationHandler.END
 
     async def run_user_monitors(self, update: Update, context: ContextTypes.DEFAULT_TYPE):
-        self.download_new_finds(update.effective_chat.id)
+        await self.download_new_finds(update.effective_chat.id)
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text="ran all monitors")
 

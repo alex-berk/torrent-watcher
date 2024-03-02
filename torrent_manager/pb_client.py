@@ -1,4 +1,4 @@
-import requests
+from httpx import AsyncClient, ReadTimeout
 import json
 from dataclasses import dataclass
 from uuid import uuid4
@@ -54,12 +54,14 @@ class PBSearcher:
             {torrent_details.name}{trackers_list_formatted}"
         return link
 
-    def search_torrent(self, query: str = "") -> list[TorrentDetails]:
+    async def search_torrent(self, query: str = "") -> list[TorrentDetails]:
         if not query:
             query = self.default_query
+        logger.debug(f"running search_torrent {query=}", {"query": query})
         try:
-            r = requests.get(self._search_host, params={"q": query})
-        except requests.exceptions.ReadTimeout:
+            async with AsyncClient(timeout=10) as client:
+                r = await client.get(self._search_host, params={"q": query})
+        except ReadTimeout:
             logger.warning("timeout waiting response from external host", query=query)
             return []
         if (status_code := r.status_code) != 200:
@@ -82,9 +84,9 @@ class PBSearcher:
             search_results_formatted, key=lambda x: x.seeds, reverse=True)
         return search_results_formatted
 
-    def look(self) -> TorrentDetails | None:
+    async def look(self) -> TorrentDetails | None:
         logger.info(f"Monitor running: {self}", **self.to_dict())
-        if result := self.search_torrent(self.default_query):
+        if result := await self.search_torrent(self.default_query):
             logger.success(f"Monitor {self} found results", **self.to_dict())
             return result[0]
 
@@ -133,12 +135,12 @@ class PBMonitor(PBSearcher):
     def default_query(self) -> str:
         return f"{self.show_name} s{self.season_number:02d}e{self.episode_number:02d}"
 
-    def _search_episode(self) -> list[TorrentDetails]:
+    async def _search_episode(self) -> list[TorrentDetails]:
         search_query = self.default_query
-        return self.search_torrent(search_query)
+        return await self.search_torrent(search_query)
 
-    def _find_new_episode(self) -> TorrentDetails | None:
-        available_downloads = self._search_episode()
+    async def _find_new_episode(self) -> TorrentDetails | None:
+        available_downloads = await self._search_episode()
         if not available_downloads:
             return
         if self.size_limit_gb:
@@ -154,6 +156,6 @@ class PBMonitor(PBSearcher):
         except StopIteration:
             return
 
-    def look(self) -> TorrentDetails | None:
+    async def look(self) -> TorrentDetails | None:
         logger.info(f"Monitor running: {self}", **self.to_dict())
-        return self._find_new_episode()
+        return await self._find_new_episode()
