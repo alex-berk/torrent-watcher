@@ -133,16 +133,27 @@ class MonitorOrchestrator:
         self._save_settings()
         return jobs_with_results
 
-    async def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] | None = None, owner_id: int = 0) -> list[JobResult]:
+
+    async def run_search_jobs(
+        self,
+        jobs_to_run: Iterable[MonitorSetting] | None = None,
+        owner_id: int = 0,
+    ) -> list[JobResult]:
         logger.debug("running search jobs")
         jobs_with_results_all: list[JobResult] = []
+
         if jobs_to_run:
             iteration_result = await self.run_search_job_iteration(jobs_to_run)
         else:
             iteration_result = await self.run_search_job_iteration(owner_id=owner_id)
+
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
-            jobs_for_next_iteration = (job.job_settings for job in iteration_result
-                                       if job.job_settings.searcher.monitor_type == "show")
+            jobs_for_next_iteration = (
+                job.job_settings
+                for job in iteration_result
+                if job.job_settings.searcher.monitor_type == "show"
+            )
             iteration_result = await self.run_search_job_iteration(jobs_for_next_iteration)
+
         return jobs_with_results_all
