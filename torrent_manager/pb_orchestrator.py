@@ -133,7 +133,6 @@ class MonitorOrchestrator:
         self._save_settings()
         return jobs_with_results
 
-
     async def run_search_jobs(
         self,
         jobs_to_run: Iterable[MonitorSetting] | None = None,
