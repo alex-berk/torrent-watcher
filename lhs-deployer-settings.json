@@ -5,6 +5,6 @@
       "steps": ["docker compose down"],
       "optional": true
     },
-    { "name": "build", "steps": ["docker compose up -d"] }
+    { "name": "build", "steps": ["doppler run --mount docker-compose.yml --mount-template doppler-docker-compose.yml --command 'doppler run -- docker compose up -d'"] }
   ]
 }
