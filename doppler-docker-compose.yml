@@ -1,12 +1,13 @@
-version: "3"
+x-doppler: &doppler-env
+  environment:{{range $key, $value := .}}
+    - {{$key}}{{end}}
 
 services:
   torrent-watcher:
     build: .
     container_name: torrent-watcher
+    <<: *doppler-env
     volumes:
       - ./data:/usr/data
       - ./logs:/usr/logs
-    environment:
-      - TZ=Asia/Jerusalem
     restart: unless-stopped
