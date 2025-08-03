@@ -355,7 +355,7 @@ class TgBotRunner:
                                            keyboard),
                                        parse_mode="html")
 
-    @ staticmethod
+    @staticmethod
     async def unknown_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await context.bot.send_message(chat_id=update.effective_chat.id,
                                        text="Sorry, I didn't understand that command.")

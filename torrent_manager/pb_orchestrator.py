@@ -95,11 +95,7 @@ class MonitorOrchestrator:
             json.dump(settings_json, f, indent=2)
 
     def get_monitor_by_uuid(self, uuid) -> MonitorSetting | None:
-        job_with_uuid = filter(lambda j: j.searcher.uuid == uuid, self._settings)
-        try:
-            return next(job_with_uuid)
-        except StopIteration:
-            return
+        return next((j for j in self._settings if j.searcher.uuid == uuid), None)
 
     async def add_monitor_job(self, setting: MonitorSetting, run_after_init) -> list[JobResult]:
         self._settings.append(setting)
