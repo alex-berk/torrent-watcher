@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import json
 from torrent_manager.pb_client import PBSearcher, PBMonitor, TorrentDetails
 from logger import logger
+import asyncio
 
 
 @dataclass
@@ -94,28 +95,23 @@ class MonitorOrchestrator:
             json.dump(settings_json, f, indent=2)
 
     def get_monitor_by_uuid(self, uuid) -> MonitorSetting | None:
-        job_with_uuid = filter(lambda j: j.searcher.uuid == uuid, self._settings)
-        try:
-            return next(job_with_uuid)
-        except StopIteration:
-            return
+        return next((j for j in self._settings if j.searcher.uuid == uuid), None)
 
-    def add_monitor_job(self, setting: MonitorSetting, run_after_init) -> list[JobResult]:
+    async def add_monitor_job(self, setting: MonitorSetting, run_after_init) -> list[JobResult]:
         self._settings.append(setting)
         self._save_settings()
         # TODO: refactor self._settings into subscribable, so this function wouldn't have to return anything
         if run_after_init:
-            return self.run_search_jobs([setting])
+            return await self.run_search_jobs([setting])
         return []
 
     def delete_monitor_job(self, job) -> None:
         self._settings.remove(job)
         self._save_settings()
 
-    def add_monitor_job_from_dict(self, settings_dict: dict,
-                                  run_after_init: bool = True) -> list[JobResult]:
+    async def add_monitor_job_from_dict(self, settings_dict: dict, run_after_init: bool = True) -> list[JobResult]:
         settings = self._dict_to_setting(settings_dict)
-        return self.add_monitor_job(settings, run_after_init)
+        return await self.add_monitor_job(settings, run_after_init)
 
     def get_jobs_by_owner_id(self, owner_id) -> Iterable[MonitorSetting]:
         self._update_monitor_settings_from_json()
@@ -123,12 +119,13 @@ class MonitorOrchestrator:
                          if s.owner_id == owner_id)
         return jobs_filtered
 
-    def run_search_job_iteration(self, jobs_to_run: Iterable[MonitorSetting] | None = None, owner_id=None) \
+    async def run_search_job_iteration(self, jobs_to_run: Iterable[MonitorSetting] | None = None, owner_id=None) \
             -> list[JobResult]:
         eligible_jobs = jobs_to_run or self.get_jobs_by_owner_id(owner_id)
+        # TODO: just gather and then map
         jobs_with_results = [JobResult(result, job)
                              for job in eligible_jobs
-                             if (result := job.searcher.look())]
+                             if (result := await asyncio.gather(job.searcher.look()))]
         done_jobs = (j for j in jobs_with_results
                      if j.job_settings.searcher.monitor_type == "movie")
         for job in done_jobs:
@@ -136,17 +133,26 @@ class MonitorOrchestrator:
         self._save_settings()
         return jobs_with_results
 
-    def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] | None = None,
-                        owner_id: int = 0) -> list[JobResult]:
+    async def run_search_jobs(
+        self,
+        jobs_to_run: Iterable[MonitorSetting] | None = None,
+        owner_id: int = 0,
+    ) -> list[JobResult]:
         logger.debug("running search jobs")
         jobs_with_results_all: list[JobResult] = []
+
         if jobs_to_run:
-            iteration_result = self.run_search_job_iteration(jobs_to_run)
+            iteration_result = await self.run_search_job_iteration(jobs_to_run)
         else:
-            iteration_result = self.run_search_job_iteration(owner_id=owner_id)
+            iteration_result = await self.run_search_job_iteration(owner_id=owner_id)
+
         while iteration_result:
             jobs_with_results_all.extend(iteration_result)
-            jobs_for_next_iteration = (job.job_settings for job in iteration_result
-                                       if job.job_settings.searcher.monitor_type == "show")
-            iteration_result = self.run_search_job_iteration(jobs_for_next_iteration)
+            jobs_for_next_iteration = (
+                job.job_settings
+                for job in iteration_result
+                if job.job_settings.searcher.monitor_type == "show"
+            )
+            iteration_result = await self.run_search_job_iteration(jobs_for_next_iteration)
+
         return jobs_with_results_all
