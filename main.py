@@ -1,4 +1,3 @@
-from multiprocessing import Process
 from time import sleep
 from telegram.ext import ApplicationBuilder
 from config import TRANSMISSION_HOST, TG_BOT_TOKEN, ALLOWED_TG_IDS, HEARTBEAT_KEY
@@ -38,13 +37,16 @@ async def run_search_jobs_on_timer(timer_seconds):
     sleep(timer_seconds)
     await run_search_jobs_on_timer(timer_seconds)
 
+
 # @logger.catch(level="WARNING")
 async def bot_poll():
     logger.debug("bot_poll started")
     runner.tg_client.run_polling()
 
+
 async def main():
     await asyncio.gather(run_search_jobs_on_timer(PERIOD_SECONDS), bot_poll())
+
 
 if __name__ == '__main__':
     asyncio.run(run_search_jobs_on_timer(PERIOD_SECONDS))

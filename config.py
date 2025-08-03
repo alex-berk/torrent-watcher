@@ -1,5 +1,6 @@
 from os import getenv
 
+
 MEDIA_DOWNLOAD_PATH: str = getenv("MEDIA_DOWNLOAD_PATH") or ""
 REGULAR_DOWNLOAD_PATH: str = getenv("REGULAR_DOWNLOAD_PATH") or ""
 TRANSMISSION_HOST: str = getenv("TRANSMISSION_HOST") or ""

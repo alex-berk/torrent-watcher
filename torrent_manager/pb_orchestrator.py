@@ -109,8 +109,7 @@ class MonitorOrchestrator:
         self._settings.remove(job)
         self._save_settings()
 
-    async def add_monitor_job_from_dict(self, settings_dict: dict,
-                                  run_after_init: bool = True) -> list[JobResult]:
+    async def add_monitor_job_from_dict(self, settings_dict: dict, run_after_init: bool = True) -> list[JobResult]:
         settings = self._dict_to_setting(settings_dict)
         return await self.add_monitor_job(settings, run_after_init)
 
@@ -134,8 +133,7 @@ class MonitorOrchestrator:
         self._save_settings()
         return jobs_with_results
 
-    async def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] | None = None,
-                        owner_id: int = 0) -> list[JobResult]:
+    async def run_search_jobs(self, jobs_to_run: Iterable[MonitorSetting] | None = None, owner_id: int = 0) -> list[JobResult]:
         logger.debug("running search jobs")
         jobs_with_results_all: list[JobResult] = []
         if jobs_to_run:
